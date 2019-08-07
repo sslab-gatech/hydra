@@ -1,0 +1,7 @@
+*.img
+xfs_standalone
+xfs-fsfuzz
+xfs-tfuzz
+*.o
+*.so
+xfs_general_standalone

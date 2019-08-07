@@ -1,0 +1,59 @@
+.TH tunegfs2 8
+
+.SH NAME
+tunegfs2 - View and manipulate gfs2 superblocks
+
+.SH SYNOPSIS
+.B tunegfs2
+[\fIOPTIONS\fR]
+/dev/blockdevice
+
+.SH DESCRIPTION
+tunegfs2 allows viewing and manipulating the values contained in a
+GFS or GFS2 superblock. It is able to modify the \fIUUID\fR (on GFS2 only),
+\fIlabel\fR, \fIlockproto\fR and \fIlocktable\fR.
+
+The values in the GFS2 superblock are read only on mount. Any
+changes on a live filesystem will not take effect until the next
+time it is mounted. Making changes on a live filesystem is not
+recommended for this reason.
+
+.SH OPTIONS
+
+.TP
+\fB-h\fP
+
+Prints out usage information for this command.
+
+.TP
+\fB-l\fP
+
+List contents of the filesystem superblock. Includes the current values of the
+parameters that can be set by this program.
+
+.TP
+\fB-L\fP \fI<label>\fR
+
+Change the filesystem label. Note that the GFS2 filesystem label is
+also the locktable name.
+
+.TP
+\fB-o\fP \fI[lockproto=<proto>]\fR \fI[locktable=<table>]\fR
+
+Set mount options. Currently supported options include lockproto and
+locktable
+
+.TP
+\fB-U\fP \fI<uuid>\fR
+
+Set the filesystem UUID
+
+.TP
+\fB-V\fP
+
+Print out the information on the version of the tool.
+
+.SH SEE ALSO
+
+\fBgfs2\fP(5)
+

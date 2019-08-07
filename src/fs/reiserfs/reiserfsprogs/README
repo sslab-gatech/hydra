@@ -1,0 +1,55 @@
+
+Reiserfs is a file system based on balanced tree algorithms, which is described
+at www.namesys.com.
+
+[LICENSING]
+
+ReiserFSprogs is hereby licensed under the GNU General Public License version 2
+but with the following "Anti-Plagiarism" modification:   You may not remove any
+credits  or  brand marks,  or cause them to not display,  unless you are an end
+user  (that is,  you are not redistributing to others).  Yes,  there really are
+people with the nerve  to remove credits from software  they did not write,  or
+only wrote a small part of,  and they are even frequently occurring sad to say.
+Credits are not ads,  credits describe  someone's  contribution  to the project
+(e.g. labor or money) whereas an ad says something else.
+
+Source   code   files   that   contain   the   phrase  "licensing  governed  by
+reiserfsprogs/README" are "governed files" throughout that file. Governed files
+are licensed under this license.  The portions of them owned by Hans Reiser, or
+authorized to be licensed by him, have been in the past,  and likely will be in
+the future,  licensed to other parties  under  other licenses.  If you add your
+code to governed files,  and don't want it to be owned by Hans Reiser, put your
+copyright label on that code  so  we  can  keep  things straight.  It will be a
+kindness if you identify whether Hans Reiser is allowed to license code labeled
+as owned by you on your behalf other than under this license,  because he wants
+to  know  if  it  is  okay  to  do  so and  put a check in the mail to you (for
+non-trivial improvements)  when he makes his next sale.  He makes no guarantees
+as to  the amount if any,  though he feels motivated  to motivate contributors,
+and you can surely discuss this with him before or after contributing. You have
+the right to decline  to allow him to license your code contribution other than
+under  this  license or the GPL.  Further  licensing  options are available for
+commercial and/or other interests directly from reiser@namesys.com<P>
+[END LICENSING]
+
+Send bug reports to reiserfs-devel@vger.kernel.org.
+
+Hideous  Commercial  Pitch: Spread  your  development  costs  across  other  OS
+vendors.  Select from the best in the world,  not the best in your building, by
+buying from third party OS component suppliers. Leverage the software component
+development power  of the internet.  Be the most aggressive in taking advantage
+of the commercial possibilities of decentralized internet development,  and add
+value through your branded integration  that  you  sell as an operating system. 
+Let your competitors  be the ones  to compete  against  the entire  internet by
+themselves.  Be hip,  get with the new economic trend,  before your competitors 
+do. Send email to reiser@namesys.com.
+
+To understand the code,  after reading the website,  start reading  the code by
+reading reiserfs_fs.h first.
+
+IMPORTANT NOTE: As of approximately October 2007, namesys.com has been
+offline and all of the original Namesys staff have gone on to other ventures
+or are otherwise unavailable. All removals of the namesys.com domain from
+the code and documentation are to avoid confusion by users, not to avoid
+proper attribution. Reiserfsprogs has been maintained by the ReiserFS
+development community for some time and can be reached at
+reiserfs-devel@vger.kernel.org.

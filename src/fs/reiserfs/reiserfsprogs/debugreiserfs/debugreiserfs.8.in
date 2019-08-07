@@ -1,0 +1,97 @@
+.\" -*- nroff -*-
+.\" Copyright 1996-2004 Hans Reiser.
+.\" 
+.TH DEBUGREISERFS 8 "January 2009" "Reiserfsprogs @PACKAGE_VERSION@"
+.SH NAME
+debugreiserfs \- The debugging tool for the ReiserFS filesystem.
+.SH SYNOPSIS
+.B debugreiserfs
+[
+.B -dDJmoqpuSV
+] [
+.B -j \fIdevice
+] [
+.B -B \fIfile
+] [
+.B -1 \fIN
+]
+
+.\" ] [
+.\" .B -s
+.\" ] [
+.I device
+.SH DESCRIPTION
+\fBdebugreiserfs\fR sometimes helps to solve problems with reiserfs filesystems. 
+When run without options it prints the super block of the ReiserFS filesystem found
+on the \fIdevice\fR.
+.TP
+.I device
+is the special file corresponding to the device (e.g /dev/hdXX for
+an IDE disk partition or /dev/sdXX for a SCSI disk partition).
+.SH OPTIONS
+.TP
+\fB-j\fR \fIdevice\fR
+prints the contents of the journal. The option \-p allows it to pack the journal 
+with other metadata into the archive.
+.TP
+\fB-J\fR
+prints the journal header.
+.TP
+.B -d
+prints the formatted nodes of the internal tree of the filesystem.
+.TP
+.B -D
+prints the formatted nodes of all used blocks of the filesystem.
+.TP
+.B -m
+prints the contents of the bitmap (slightly useful).
+.TP
+.B -o
+prints the objectid map (slightly useful).
+.TP
+\fB-B\fR \fIfile\fR
+takes the list of bad blocks stored in the internal ReiserFS tree and translates it 
+into an ascii list written to the specified file.
+.TP
+\fB-1\fR \fIblocknumber\fR
+prints the specified block of the filesystem.
+.TP
+.\" \fB-s
+.\" scans the partition and prints a line when any kind of reiserfs
+.\" formatted nodes found. Can be used to find specific key in the filesystem.
+.\" .TP
+.B -p
+extracts the filesystem's metadata with \fBdebugreiserfs\fR \-p /dev/xxx | gzip \-c > 
+xxx.gz. None of your data are packed unless a filesystem corruption presents when 
+the whole block having this corruption is packed. You send us the output, and we use 
+it to create a filesystem with the same strucure as yours using \fBdebugreiserfs \-u\fR.
+When the data file is not too large, this usually allows us to quickly reproduce 
+and debug the problem.
+.TP
+.B -u
+builds the ReiserFS filesystem image with gunzip \-c xxx.gz | \fBdebugreiserfs\fR 
+\-u /dev/image of the previously packed metadata with \fBdebugreiserfs \-p\fR. The
+result image is not the same as the original filesystem, because mostly only metadata
+were packed with \fBdebugreiserfs \-p\fR, but the filesystem structure is completely 
+recreated.
+.TP
+.B -S 
+When \-S is not specified \-p 
+.\" and -s 
+deals with blocks marked used in the filesystem bitmap only. With this option 
+set \fBdebugreiserfs\fR will work with the entire device.
+.TP
+.B -q
+When 
+.\" -s or 
+\-p is in use, suppress showing the speed of progress.
+.SH AUTHOR
+This version of \fBdebugreiserfs\fR has been written by Vitaly Fertman 
+<vitaly@namesys.com>.
+.SH BUGS
+Please report bugs to the ReiserFS developers <reiserfs-devel@vger.kernel.org>, providing
+as much information as possible--your hardware, kernel, patches, settings, all printed
+messages; check the syslog file for any related information.
+.SH SEE ALSO
+.BR reiserfsck (8),
+.BR mkreiserfs (8)

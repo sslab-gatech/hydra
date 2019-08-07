@@ -1,0 +1,7 @@
+*.img
+hfsplus_standalone
+hfsplus_general_standalone
+hfsplus-fsfuzz
+hfsplus-tfuzz
+*.o
+*.so

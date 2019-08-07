@@ -1,0 +1,45 @@
+.TH gfs2_trace 8
+
+.SH NAME
+gfs2_trace \- can enable trace events, disable trace events, and capture data from GFS2 trace events.
+
+.SH SYNOPSIS
+.B gfs2_trace \fR[-dqEN]  [-e \fItrace event name]\fR [-n \fItrace event name]\fR [-o \fIoutput filename]\fR
+.PP
+
+.SH DESCRIPTION
+\fIgfs2_trace\fR can enabled and disable trace events on all trace events or selected trace events. \fIgfs2_trace\fR can
+capture the output of the trace events and write the output to a file. When capturing trace events, the script will exit
+when control-c is pressed. The trace events will be then written to the selected file.
+.PP
+
+.SH OPTIONS
+.TP
+\fB-h,  --help\fP
+Prints out a short usage message and exits.
+.TP
+\fB-d,  --debug\fP
+enables debug logging.
+.TP
+\fB-q,  --quiet\fP
+disables logging to console.
+.TP
+\fB-l,  --list\fP
+lists the enabled state and filters for the GFS2 trace events
+.TP
+\fB-E,  --enable_all_trace_events\fP
+enables all trace_events for GFS2
+.TP
+\fB-e \fI<trace event name>, \fB----enable_trace_event\fR=\fI<trace event name>\fP
+selected trace_events that will be enabled for GFS2
+.TP
+\fB-N,  --disable_all_trace_events\fP
+disables all trace_events for GFS2
+.TP
+\fB-n \fI<trace event name>, \fB----disable_trace_event\fR=\fI<trace event name>\fP
+selected trace_events that will be enabled for GFS2
+.TP
+\fB-c \fI<output filename>, \fB--capture\fR=\fI<output filename>\fP
+enables capturing of trace events and will save the data to a file
+.
+.SH SEE ALSO

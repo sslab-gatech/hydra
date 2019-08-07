@@ -1,0 +1,44 @@
+To build fscq, use the latest release of Coq (v8.8.1 at the time of last update).
+
+To develop Coq code using CoqIDE, check out coqide.sh, which invokes
+coqide with the appropriate arguments for spawning many parallel coqtop
+processes and setting the right logical-to-physical path mappings.
+
+Use GHC 8.0.1 to build the Haskell-extracted code.  On Ubuntu 17.04,
+the stock version of GHC is sufficiently recent, so just run:
+
+  echo 'library-profiling: True' >> ~/.cabal/config
+  cabal user-config update
+  cabal update
+  cabal install cryptohash rdtsc digest
+
+You also need to install headers for FUSE:
+
+  apt-get install libfuse-dev
+
+To build the Ocaml extracted code, install the following Ocaml libraries:
+
+  apt-get install libextunix-ocaml-dev libzarith-ocaml-dev
+
+To run the fuse fscq:
+
+  mkdir /tmp/fscq
+  ./mkfs disk.img
+  ./fscq disk.img -f -o big_writes,atomic_o_trunc,use_ino /tmp/fscq &
+
+To use fscq:
+
+  echo hello > /tmp/fscq/h.txt
+  cat h.txt
+  ls /tmp/fscq/
+  etc.
+
+To see stats:
+
+  cat /tmp/fscq/stats
+
+To unmount:
+
+  fusermount -u /tmp/fscq
+
+To run benchmarks, see bench/

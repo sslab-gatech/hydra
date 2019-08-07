@@ -1,0 +1,122 @@
+.\" -*- nroff -*-
+.\" Copyright 1996-2004 Hans Reiser.
+.\" 
+.TH RESIZE_REISERFS 8 "January 2009" "Reiserfsprogs-@PACKAGE_VERSION@"
+.SH NAME
+resize_reiserfs \- resizer tool for the ReiserFS filesystem
+.SH SYNOPSIS
+.BR resize_reiserfs
+[
+.B \-s
+.IR \fR[\fB+\fR|\fB\- ]\fIsize\fB[\fBK\fR|\fBM\fR|\fBG\fR]
+] [
+.B \-j
+.IR \fR\fIdev
+] [
+.B \-fqv
+]
+.I device
+.SH DESCRIPTION
+The
+.B resize_reiserfs
+tool resizes an unmounted reiserfs file system.  It enlarges or shrinks an
+reiserfs file system located on a
+.I device
+so that it will have
+.I size
+bytes or size=old_size +(\-)
+.I size
+bytes if the + or \- prefix is used.
+If the
+.B \-s
+option is not specified, the filesystem will be resized to fill the
+given device.
+The
+.I size
+parameter may have one of the optional modifiers
+.BR K ", " M ", " G ,
+which means the
+.I size
+parameter is given in kilo\-, mega\-, gigabytes respectively.
+.PP
+The
+.B resize_reiserfs
+program does not manipulate the size of the device. If you wish to
+enlarge a filesystem, you must make sure you expand the underlying
+device first. This can be done using
+.BR cfdisk (8)
+for partitions, by deleting the partition and recreating it with a
+larger size (assuming there is free space
+.I after
+the partition in question).  Make sure you re\-create it with the
+same starting disk cylinder as before!  Otherwise, the resize operation
+will certainly not work, and you may lose your entire filesystem.
+.PP
+The
+.B resize_reiserfs
+program allows to grow a reiserfs on-line if there is a free
+space on block
+.I device.
+
+.PP
+If you wish to shrink a reiserfs partition, first use
+.B resize_reiserfs
+to shrink the file system. You may then use
+.BR cfdisk (8)
+to shrink the device. When shrinking the size of the device, make sure
+you do not make it smaller than the reduced size of the reiserfs filesystem.
+
+.SH OPTIONS
+.TP
+.BR \-s\ [+|\-]\fIsize
+Set the new size in bytes.
+.TP
+.BR \-j\ \fIdev
+Set the journal device name.
+.TP 
+.BR \-f
+Force, do not perform checks.
+.TP
+.BR \-q
+Do not print anything but error messages.
+.TP
+.BR \-v 
+Turn on extra progress status messages (default).
+
+.SH RETURN VALUES
+0	Resizing successful.
+.TP
+\-1	Resizing not successful.
+
+.SH EXAMPLES
+The following example shows how to test
+.B resize_reiserfs\fR.
+Suppose 2Gb reiserfs filesystem is created on the device /dev/hda8
+and is mounted on /mnt. 
+For shrinking the device we need to unmount it first, then run
+.B resize_reiserfs
+with a
+.I size \fR parameter (in this case -1Gb):
+.PP
+\	df
+.br
+\	umount /mnt
+.br
+\	resize_reiserfs \-s \-1G /dev/hda8
+.br
+\	mount /dev/hda8 /mnt
+.br
+\	df /mnt
+
+.SH AUTHOR
+This version of
+.B resize_reiserfs
+has been written by Alexander Zarochentcev <zam@namesys.com>.
+.SH BUGS
+Please report bugs to the ReiserFS developers <reiserfs-devel@vger.kernel.org>, providing
+as much information as possible--your hardware, kernel, patches, settings, all printed
+messages; check the syslog file for any related information.
+.SH SEE ALSO
+.BR cfdisk (8),
+.BR reiserfsck (8),
+.BR debugreiserfs (8)

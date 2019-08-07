@@ -1,0 +1,46 @@
+Here are some ways to profile the CPU usage of Haskell code; in all cases,
+it's probably worth setting reallySync=False in hslib/Disk.hs.
+
+1) GHC's built-in profiling.
+
+  Add the "-prof -fprof-auto -rtsopts" GHC arguments in Makefile.
+  Run "./fuse .. +RTS -p".
+  Run some workload, then unmount the file system.
+  Look at the profile in ./fuse.prof.
+
+2) Eventlog.
+
+  Install ghc-events:
+    % apt-get install libghc-ghc-events-dev
+  Add the "-eventlog" GHC argument in Makefile.
+  Uncomment the Profile.progseq line in Extraction.v.
+  Edit hslib/Profile.hs to specify which files to profile.
+    Profiling all files is costly enough to strongly skew the results.
+  Run "./fuse .. +RTS -l-agu".
+  Run some workload, then unmount the file system.
+  Analyze the eventlog:
+    % ghc-events show fuse.eventlog | ./analyze-events.py | sort -n
+
+  See http://www.well-typed.com/blog/86/ and
+      https://ghc.haskell.org/trac/ghc/wiki/EventLog
+
+3) Ticky-ticky profiling.
+
+  Add the "-ticky -ticky-dyn-thunk -ticky-allocd" GHC arguments in Makefile.
+  Run "./fscq ... +RTS -rfscq.ticky".
+  Run some workload, then unmount the file system.
+  Look at the profile in ./fscq.ticky.
+
+  To sort profile by which functions allocate the most:
+
+    cat fscq.ticky | grep main@main | sort -nk2
+
+  See https://ghc.haskell.org/trac/ghc/wiki/Debugging/TickyTicky
+
+Example shell command to generate a profile:
+
+  rm disk.img ; \
+  ./mkfs disk.img ; \
+  ./fuse disk.img /tmp/ft +RTS -p ; \
+  ( cd ~/proj/sv6/o.linux/bin && ./mailbench /tmp/ft 1 ) ; \
+  fusermount -u /tmp/ft

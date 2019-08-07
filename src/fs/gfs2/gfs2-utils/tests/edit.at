@@ -1,0 +1,55 @@
+AT_TESTED([gfs2_edit])
+AT_BANNER([gfs2_edit tests])
+
+AT_SETUP([Save/restoremeta, defaults])
+AT_KEYWORDS(gfs2_edit edit)
+GFS_TGT_REGEN
+AT_CHECK([$GFS_MKFS -p lock_nolock $GFS_TGT $(($(gfs_max_blocks 4096)/2))], 0, [ignore], [ignore])
+AT_CHECK([gfs2_edit savemeta $GFS_TGT test.meta > savemeta.log], 0, [ignore], [ignore])
+AT_CHECK([head -2 savemeta.log], 0, [There are 1310716 blocks of 4096 bytes in the filesystem.
+Filesystem size: 4.1023GB
+], [ignore])
+GFS_TGT_REGEN
+AT_CHECK([gfs2_edit restoremeta test.meta $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([fsck.gfs2 -n $GFS_TGT], 0, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Save/restoremeta, no compression])
+AT_KEYWORDS(gfs2_edit edit)
+GFS_TGT_REGEN
+AT_CHECK([$GFS_MKFS -p lock_nolock $GFS_TGT $(($(gfs_max_blocks 4096)/2))], 0, [ignore], [ignore])
+AT_CHECK([gfs2_edit savemeta -z0 $GFS_TGT test.meta], 0, [ignore], [ignore])
+GFS_TGT_REGEN
+AT_CHECK([gfs2_edit restoremeta test.meta $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([fsck.gfs2 -n $GFS_TGT], 0, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Save/restoremeta, min. block size])
+AT_KEYWORDS(gfs2_edit edit)
+GFS_TGT_REGEN
+AT_CHECK([$GFS_MKFS -p lock_nolock -b512 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([gfs2_edit savemeta -z0 $GFS_TGT test.meta], 0, [ignore], [ignore])
+GFS_TGT_REGEN
+AT_CHECK([gfs2_edit restoremeta test.meta $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([fsck.gfs2 -n $GFS_TGT], 0, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Save/restoremeta, 4 journals])
+AT_KEYWORDS(gfs2_edit edit)
+GFS_TGT_REGEN
+AT_CHECK([$GFS_MKFS -p lock_nolock -j4 -J8 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([gfs2_edit savemeta -z0 $GFS_TGT test.meta], 0, [ignore], [ignore])
+GFS_TGT_REGEN
+AT_CHECK([gfs2_edit restoremeta test.meta $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([fsck.gfs2 -n $GFS_TGT], 0, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Save/restoremeta, min. block size, 4 journals])
+AT_KEYWORDS(gfs2_edit edit)
+GFS_TGT_REGEN
+AT_CHECK([$GFS_MKFS -p lock_nolock -b512 -j4 -J8 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([gfs2_edit savemeta -z0 $GFS_TGT test.meta], 0, [ignore], [ignore])
+GFS_TGT_REGEN
+AT_CHECK([gfs2_edit restoremeta test.meta $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([fsck.gfs2 -n $GFS_TGT], 0, [ignore], [ignore])
+AT_CLEANUP

@@ -1,0 +1,8 @@
+*.o
+*.a
+*.so
+lkl-kasan
+llvm-build/
+
+/fuzzspace-syscall
+/fuzzspace-image-syscall

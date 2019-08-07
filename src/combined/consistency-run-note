@@ -1,0 +1,20 @@
+$ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer00 -b btrfs_00 -s fs/btrfs/btrfs_wrapper.so -e samples/oracle/btrfs-10.image -y seed-consistency -i in00 -o out00 -u 10 -- lkl/tools/lkl/btrfs-combined-consistency -t btrfs -i samples/oracle/btrfs-10.image -e emulator/emulator.py -l log00/ -d “” -r -p @@
+
+[AFL args]
+-S fuzzer00: slave mode
+-b btrfs_00: instance name
+-s fs/btrfs/btrfs_wrapper.so: fs-specific parser
+-e samples/oracle/btrfs-10.image: base image file. Use {fsname}-10.image for consistency testing.
+-y seed-consistency: seed file directory. Create seed files by $ ./combined/create_corpus_consistency istat/btrfs-10.istat seed-consistency
+-i in00: input directory
+-o out00: output directory
+-u 10: cpu id to run fuzzer instance  
+
+[LKL args]
+-t btrfs: fs type
+-i samples/oracle/btrfs-10.image: base image file. Should be same as the -e arg above
+-e emulator/emulator.py: emulator path
+-l log00: log directory. All consistency bug logs are saved here.
+-d “”: if you want to use alternative tmp directory, specify prefix here. For example, when utilizing tmpfs, I mkdir /tmp/mosbench/tmpfs-separate/2/tmp, and put -d “/tmp/mosbench/tmpfs-separate/2/“.
+-r: Set -r if you don’t want to save crashed image file. Use it when you’re short of space.
+-p @@: AFL automatically sets @@ to the current test case program.

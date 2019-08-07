@@ -1,0 +1,653 @@
+xfsdump-3.1.8 (21 Sep 2017)
+	- Build fixes for musl libc (Felix Janda)
+
+xfsdump-3.1.7 (18 Aug 2017)
+	- No further changes
+
+xfsdump-3.1.7-rc1  (13 Jul 2017)
+	- Fix race condition in multi-stream dump (Eryu Guan)
+	- Fix memory leak (Paulo Alcantara)
+	- Fix 32-bit build with newer xfsprogs (Eric Sandeen)
+	- Fix bind mount targets for xfsdump (Eric Sandeen)
+
+xfsdump-3.1.6 (14 Oct 2015)
+	- fix build issues against xfsprogs 4.2.0 headers
+	- clean up worst of libhandle API abuse
+	- remove all unnecessary build dependencies on xfsprogs headers
+
+xfsdump-3.1.5 (14 Oct 2015)
+	- __psint_t no longer available (Nathan Scott)
+	- restore: fix 2GB directory dump limitation (Rich Johnston)
+	- restore: fix uuid check for incremental restore (Rich Johnston)
+	- dump: fix crash adding inode groups (Rich Johnston)
+
+xfsdump-3.1.4 (18 July 2014)
+	- fix partial region segfault and debug code (Eric Sandeen)
+	- dump wholly sparse files correctly (Eric Sandeen)
+	- restore capabilities correctly
+	- memory leak fixes (Boris Ranto)
+	- sys_getdents modernisation (Kyle McMartin)
+	- Error message fixes (Iustin Pop)
+	- Updated polish translation (Jakub Bogusz)
+	- debian package build updates (Nathan Scott)
+
+xfsdump-3.1.3 (8 May 2013)
+	- Fix a segfault in xfsrestore when a path name is too long,
+	  thanks to Nigel Tamplin.
+	- Fix a backward compatibility problem.  Dumps created with
+	  version 3.1.2 where extended attributes are in use failed
+	  to restore with v3.1.0 due to file header checksum errors.
+	  Thanks to Fugazzi for reporting.
+	- Refactored release scripts to conform to using git archive.
+	- Changed the build process so that 'make deb' uses the same
+	  process of creating a source tree as the release script.
+
+xfsdump-3.1.2 (13 December 2012)
+	- Update release script to create a source tarball.
+
+xfsdump-3.1.1 (31 October 2012)
+	- Save and restore 32 bit project ids correctly.
+	- German translation, thanks to Chris Leick.
+	- A few fixups to the German translation, thanks to Stefan Ring.
+	- An initial Polish translation, thanks to Jakub Bogusz.
+	- Various build system cleanups, thanks to Mike Frysinger, and
+	  Jan Engelhardt.
+
+xfsdump-3.1.0 (22 March 2012)
+	- Fix metadata restore on split files.
+	- Add a -D option to skip a recursive scan of the filesystem
+	  when dumping.
+	- Fix a 1 byte overflow with empty lists, thanks to Mike Frysinger.
+	- Enable multi-stream support on Linux using pthreads.
+	- Fix handling of Ctrl-D in prompts.
+	- Obsolete SGI_XFSDUMP_SKIP_FILE extended attribute for excluding
+	  files from dump.
+	- Fix restoration of extended attributes on the root directory.
+	- Use the full 32-bit inode generation number instead of 12-bit
+	  generation number.  Bump the dump format version to 3.
+	- Do not create parent directories for orphaned files during
+	  list-only (-t option) restore.
+
+xfsdump-3.0.6 (14 October 2011)
+	- Unconditionally add checksums to various dump headers in
+	  xfsdump.
+	- Verify dump header checksums if present in xfsrestore.
+	- Convert to using the POSIX signal API.
+	- Remove restriction of 8 options in dialogs.
+	- Various refactoring and internal cleanups to xfsdump and
+	  xfsrestore.
+	- Build system fixes, thanks to Ted Ts'o.
+
+xfsdump-3.0.5 (30 March 2011)
+	- Release tags will now be digitally signed
+	- Quota files will now be dumped, regardless of the maxsize
+	  setting
+	- The new "-s sessid" flag allows inventory sessions to be
+	  pruned by their session ID.
+	- Fixed a bug in handling long dump filenames, and dropped
+	  (undocumented) support for encoding certain parameters
+	  within the dump filename
+	- NODECHK is now off by default, meaning xfsrestore will now
+	  support 16 times more directory entries (4 billion)
+	- nrh_t is now 64 bits wide, allowing xfsrestore to support
+	  dumps with up to 4 billion directory entries
+	- nix_t is no longer useful, and has been eliminated
+	- Memory use in xfsrestore is better managed now.  Segments
+	  of nodes are now power-of-2 sized, and allocated nodes are
+	  no longer needlessly zeroed and linked into the free list.
+	- Pathname resolution in xfsrestore has a number of
+	  performance improvements
+	- Better checking has been implemented for compatibility
+	  when resuming a cumulative restore
+	- Build system output has been cleaned up considerably
+	- Dead "namreg" code has been removed
+	- Build dependencies are now determined automatically
+	- Other miscellaneous build system improvements, as well bug
+	  fixes thanks to Mike Frysinger and Arkadiusz Miśkiewicz.
+
+xfsdump-3.0.4 (13 January 2010)
+	- Improve xfsinvutil man page and argument processing.
+	- Fix timestamp handling on 64-bit architectures in xfsinvutil.
+	- Various build system improvements.
+
+xfsdump-3.0.2 (9 May 2009)
+	- Update the Debian packaging and resolve xfsprogs dependencies.
+
+xfsdump-3.0.1 (5 May 2009)
+	- Update the Makepkgs script to generate proper source tarballs.
+	- Small specfile improvements, thanks to Jan Engelhardt.
+	- Fix parallel builds, thanks to Mike Frysinger.
+	- Various autoconf/libtool fixes, thanks to Andreas Gruenbacher.
+
+xfsdump-3.0.0 (4 February 2009)
+	- Bump major package version number to signify changed
+	  dependencies and moved binaries (xfs_fsr and estimate
+	  have moved into xfsprogs).
+	- xfsdump should no longer make use of internal XFS
+	  headers and libraries, in particular no use of libxfs
+	  is permitted in this package anymore (such detailed
+	  on-disk format knowledge is the realm of xfsprogs).
+	- Fix xfsdump/xfsrestore to work on systems with 64k
+	  page size.
+
+xfsdump-2.2.49 (17 Feb 2008)
+	- Fix up error handling in _rmt_open in librmt.
+	  Warnings reported by Michal Marek <mmarek@novell.com>
+
+xfsdump-2.2.48 (07 Feb 2008)
+	- Prune dump sessions with 0 media files even when using -m.
+
+xfsdump-2.2.47 (01 Feb 2008)
+	- Correctly detect whether a tape device is in variable or
+	  fixed block mode when using the TS tape driver.
+
+xfsdump-2.2.46 (24 Aug 2007)
+	- Specify mode on all open(2) calls that use O_CREAT.
+
+xfsdump-2.2.45 (24 May 2007)
+	- Change fsr's temp directory mode to 0700 to deny full access.
+	- Update fsr's usage text.
+
+xfsdump-2.2.44 (01 February 2007)
+	- Fix use of getopt's optopt variable. Thanks to Kouta Ooizumi.
+	- Initialize xfsdump's logging facility earlier. Thanks to
+	  Kouta Ooizumi.
+	- Log a message for each quota file restored, not just the first.
+	- When using -z, check a file's size against the max dump file
+	  size just before dumping the file, rather than only during the
+	  initial scan, to account for changes during the dump.
+	- A sync needs to be issued before the first inode scan to avoid
+	  potentially skipping modified files in an incremental dump.
+
+xfsdump-2.2.43 (02 October 2006)
+	- Change the inode scans to seek to the next inode of
+	  interest, rather than always doing a full scan. Useful
+	  for dumps that contain only a subset of the inodes
+	  in a filesystem (incrementals, subtree dumps, etc.).
+	- Produce a more accurate dump size estimate when
+	  it is worthwhile to do so (when using multiple dump
+	  streams or when skipping files based on size).
+
+xfsdump-2.2.42 (08 August 2006)
+	- Rework code to remove the DMAPI build and run-time dependency.
+
+xfsdump-2.2.41 (14 July 2006)
+	- Fix issues with makedepend on libtool libraries.
+	- Fix issues with symbolic link handling in Makefiles.
+
+xfsdump-2.2.40 (05 July 2006)
+	- Update translation Makefile to work better with the Ubuntu
+	  translation system.  Thanks to feedback from Martin Pitt.
+	- Fix annoying "ignores datarootdir" warning from configure.
+	- Fix issues with makedepend build infrastructure.
+
+xfsdump-2.2.39 (21 June 2006)
+	- Fix for parallel compiles, thanks to Robin H. Johnson.
+
+xfsdump-2.2.38 (06 June 2006)
+	- Performance improvements for dumping subtrees.
+
+xfsdump-2.2.37 (24 May 2006)
+	- Fix xfs_fsr memory and file descriptor leaks.
+	- Fix xfs_fsr handling some of the extended inode flags
+	  and fields (like project IDs, extsize, realtime, etc).
+	- Fix Debian packaging for libc-dev build dependency.
+	- Fix up auto lib64 install detection for x86_64 platforms.
+	- Use -O2 optimisation by default now like everywhere else.
+	- Default to using a single media file for each strategy.
+	  Multiple media files can be enabled on tape strategies
+	  by using the -d option.
+	- Fix a bug in restoring multiple links to files with the
+	  immutable bit set.
+	- Fix a regression that caused xfsrestore to fail when
+	  restoring files that were changing during the dump.
+	- Remove some overhead in restoring files that were dumped
+	  in multiple extent groups (> 16 MiB).
+	- Add simple interface to HSM-specific code in xfsrestore,
+	  similar to that already in xfsdump.
+	- Fix fsr mishandling directories given as arguments.
+	- Fix build dependency on recent xfsprogs header files.
+
+xfsdump-2.2.36 (15 February 2006)
+	- Debian packaging updates (debmake out, debhelper in).
+	- Minor man page fixups with respect to hyphenation.
+
+xfsdump-2.2.35 (07 February 2006)
+	- Merge some minor changes in from IRIX.
+
+xfsdump-2.2.34 (31 January 2006)
+	- Updated the spec file to correctly set package user/group.
+	- Optimizations to increase the performance of xfsdump and
+	  xfsrestore, especially on filesystems with millions of inodes.
+	  Many small changes were made to minimize the number of system
+	  calls required per inode.
+	- Significant changes to xfsdump:
+	  o Cache the gen number of each inode during the initial inode
+	    scan so that a bulkstat single does not need to be done for
+	    each inode when dumping directories.
+	  o No longer retrieve the DMF attribute when estimating the dump
+	    size of a file. Use information from the bulkstat instead.
+	  o Retrieve DMF attribute by handle instead of doing
+	    open/attr_getf/close.
+	  o In determining where to split multi-stream dumps, take into
+	    consideration the number of files and not just the file size.
+	    This allows filesystems with large amounts of inodes but
+	    relatively little data (DMF filesystem) to be split correctly.
+	- Significant changes to xfsrestore:
+	  o Buffer writes to the namreg file to eliminate 2 very small
+	    write system calls per directory entry.
+	  o Buffer writes to dirattr file to eliminate a small write system
+	    call per directory.
+	  o Speedup the check to see if a particular window of the tree
+	    file is mapped. This allows xfsrestore to use more, smaller
+	    windows which is beneficial if we can't fit them all in memory
+	    and have to start unmapping them. This also makes the -w
+	    option obsolete so that option now has no effect.
+	  o Change the hash function to give a better distribution among
+	    the hash buckets.
+	  o Do not make an unnecessary unlink call if the file being
+	    restored does not already exist.
+
+xfsdump-2.2.33 (16 December 2005)
+	- Add option to allow dump time to be overridden.
+	  Useful if doing incremental dumps of snapshots.
+	  Thanks to David Brown.
+
+xfsdump-2.2.32 (29 November 2005)
+	- Dump and restore project ids and project quotas.
+	- Remove xfsdq(8) and xfsrq(8); use xfs_quota(8) to dump and
+	  restore quotas now.
+	- Fix the setting of extended inode flags during restore.
+	  Some flags must be set before writing file data, and others
+	  must be set after writing file data and extended attributes.
+
+xfsdump-2.2.31 (10 November 2005)
+	- Sync up build system (m4 macros, etc) with other projects
+	- Update SGI copyright/licence notices
+
+xfsdump-2.2.30 (27 July 2005)
+	- Fix some problems in the xfsrq(8) script, thanks to Kim Hansen.
+
+xfsdump-2.2.29 (23 June 2005)
+	- Change xfsrestore to retry a write that fails with ENOSPC
+	  after issuing a fdatasync call. If it still fails, issue
+	  a sync call and retry once more.
+
+xfsdump-2.2.28 (03 June 2005)
+	- removal of unnecessary stat64_to_xfsbstat function
+
+xfsdump-2.2.27 (08 March 2005)
+	- Fix compilation with gcc4, from Andreas Jochens.
+
+xfsdump-2.2.26 (09 February 2005)
+	- Fix xfsrestore so that it can restore to non-XFS filesystems again.
+
+xfsdump-2.2.25 (13 October 2004)
+	- Bump the version to deal with the mixup in 2.2.23-lbs
+	  (that fix was missing from the 2.2.23/2.2.24 versions).
+
+xfsdump-2.2.23-lbs (04 October 2004)
+	- Fix a problem dumping DMF filesystems when files change
+	  from dual-state to offline during the dump.
+
+xfsdump-2.2.24 (29 Sep 2004)
+	- Update m4 macros, incorporating some portability changes.
+
+xfsdump-2.2.23 (21 Jul 2004)
+	- Fix up xfs_fsr and xfsdump to prevent possible crashes on 64 bit
+	  machines such as Alphas, when using a 64 bit count passed to bulkstat
+	  when only 32 bits of it have been set by bulkstat.
+	  Suggestion came from Jan-Jaap van der Heijden.
+	  See http://oss.sgi.com/bugzilla/show_bug.cgi?id=346 for details.
+
+xfsdump-2.2.22 (19 Jul 2004)
+	- Add support for new DMF attribute format.
+	- Fix bug in HSM code where a DMF attribute
+	  could be generated for both the root and
+	  secure extended attribute namespaces.
+
+xfsdump-2.2.21 (15 Apr 2004)
+	- Always allocate a filesystem handle on restore instead of
+	  doing so only when restoring DMAPI events, as the filesystem
+	  handle is also needed if restoring extended attrs.
+	- Remove path_to_fshandle calls in tree.c. These existed to
+	  ensure that we always had a fshandle before calling
+	  open_by_handle. These calls are extraneous since we now
+	  allocate a fshandle during context_init.
+	- Change open_by_fshandle calls to open_by_handle since
+	  we are passing a file handle, not a fshandle.
+
+xfsdump-2.2.20 (31 March 2004)
+	- fix up "xfs_invutil -i" which was getting segmentation faults on
+	  presumably long session labels.
+	  See http://oss.sgi.com/bugzilla/show_bug.cgi?id=320.
+	  Become paranoid and convert all sprintf's to snprintf's.
+
+xfsdump-2.2.19 (23 March 2004)
+	- rearrange fsr algorithm to not copy data unless extent
+	  count has been improved.  Suggested by Chris Wedgwood
+	  <cw at f00f dot org> and Utz Lehmann <xfs at s2y4n2c dot de>
+
+xfsdump-2.2.18 (25 February 2004)
+	- add support for the security extended attributes namespace
+
+xfsdump-2.2.17 (13 February 2004)
+	- modify calls to libhandle subroutines to account for
+	  changes to the libhandle library.
+
+xfsdump-2.2.16 (05 December 2003)
+	- fix xfsrestore to restore new XFS inode flags:  immutable,
+	  append, sync, noatime and nodump.  The inode flags have also
+	  been added to the _mk_fillconfig_ea() routine in common.dump,
+	  called by QA test 063 to test inode flags and xattrs.
+	- fix xfsdump to honor the new nodump xflag, "XFS_XFLAG_NODUMP",
+	  (in conjunction with -e).  The original method to skip files,
+	  -e plus extended attribute "SGI_XFSDUMP_SKIP_FILE", is still
+	  supported.  Admins may choose which method to use.  The
+	  xfsdump man page has been updated to document these changes.
+	- update man pages with a more detailed description of the
+	  inventory media file that gets written to the end of each dump.
+	- remove 'miniroot' reference from xfsdump man page.
+
+xfsdump-2.2.15 (18 December 2003)
+	- a mod was added in 2.2.13 to fix the way xfsdump handles
+	  multiple dump sessions to a single tape.  The mod fixed
+	  problems that the TS tape driver was hitting but actually
+	  broke multiple backup functionality using the ST tape
+	  driver.  Both problems (ST and TS) are fixed in 2.2.15.
+
+xfsdump-2.2.14 (18 October 2003)
+	- update Debian packaging to require latest dmapi packages.
+
+xfsdump-2.2.13 (21 July 2003)
+	- fix ST/TS tape driver compatibility issues in drive_scsitape.
+	- fix multiple backups to a single tape (TS AND ST).
+
+xfsdump-2.2.12 (29 May 2003)
+	- fix up an invutil Makefile botch which was effectively
+	  disabling the optional ncurses support (interactive mode).
+
+xfsdump-2.2.11 (26 April 2003)
+	- rework configure.in to make use of shared macros.
+	- fix up #include lines to allow compilation of sources
+	  with installed headers rather than local headers.
+	- update Debian packaging.
+	- fix up a botch in the RPM packaging from 2.2.8.
+
+xfsdump-2.2.10 (14 April 2003)
+	- fix configure tests that used AC_PATH_PROG incorrectly.
+	- switch from using mktemp to using mkstemp for xfs_copy log.
+	- use a FHS compliant name for the xfs_copy log file.
+
+xfsdump-2.2.9 (27 March 2003)
+	- add -f option to xfsdq(8) to specify an output file instead
+	  of using the standard output stream.  This file is created
+	  by xfsdq and xfsdq will fail to run if it exists already.
+	  The file is also created with a more appropriate mode than
+	  whatever the umask happened to be when xfsdump(8) was run.
+
+xfsdump-2.2.8 (27 March 2003)
+	- cleanups to the build process, in particular the automatic
+	  rpm package generation Makefile and spec file template.
+	- Makepkgs script can now propagate failures back from make.
+
+xfsdump-2.2.7 (13 March 2003)
+	- add initial support for TS tape driver.
+	  (19 February 2003)
+	- fix xfsdump -I option to set correct fsid.
+
+xfsdump-2.2.6 (19 December 2002)
+	- add initial internationalisation support.
+
+xfsdump-2.2.5 (19 December 2002)
+	- fix build fallout from macro changes in XFS headers.
+	- add a configure check so that we don't attempt to build
+	  against old versions of the headers.
+
+xfsdump-2.2.4 (08 November 2002)
+	- configure now looks for, and xfsinvutil uses, the ncurses
+	  header and library rather than the curses version - this
+	  resolves an issue in those distributions that don't make
+	  the compatibility library available.
+
+xfsdump-2.2.3 (31 October 2002)
+	- minor update to Debian packaging dependencies.
+	- inventory related bugfix.
+
+xfsdump-2.2.2 (03 October 2002)
+	- Remove fork/setuid from fsr.  Just chown temp. file to owner.
+	  This gets fsr working again with the restricted RESVSP ioctl.
+	  Chris Wedgwood <cw at f00f dot org>
+
+xfsdump-2.2.1 (24 September 2002)
+	- minor troff-version-specific fixups for xfsrestore(8).
+
+xfsdump-2.2.0 (03 September 2002)
+	- force use of version 1 XFS geometry ioctl everywhere in xfsdump
+	  package, so that these tools can still work on older kernels
+	  (they don't need the additional information in the new ioctl).
+	- added new config.h.in and configure changes to implement this.
+	- do some additional cleanup after autoconf has run.
+
+xfsdump-2.1.5 (14 August 2002)
+	- minor build fix when using relatively old versions of glibc
+	  which don't provide the SYS_getdents64 symbol.
+
+xfsdump-2.1.4 (01 August 2002)
+	- xfsinvutil -m option added (merge from IRIX).
+	- add missing GPL/copyright headers to several xfsinvutil files.
+	- correct several uses of uuid_compare in xfsinvutil.
+
+xfsdump-2.1.3 (30 July 2002)
+	- small xfsinvutil fixups to preserve compatibility with old -n
+	  option.
+	- fixed all new xfsinvutil warnings on 64bit platforms
+
+xfsdump-2.1.2 (29 July 2002)
+	- xfsinvutil interactive mode
+	- merge of a dump/restore fix from IRIX - test if a child exited
+	  with error and if a child did, set the exit_code to EXIT_ERROR.
+
+xfsdump-2.1.1 (04 July 2002)
+	- build infrastructure updates so that configure options can be
+	  used to specify paths rather than semi-hard-coded path names
+	  controlled by the ROOT/ROOT_PREFIX environment variables; eg.
+	  now allows /lib64 and /lib32
+
+xfsdump-2.1.0 (14 June 2002)
+	- new fsinfo system call used, mostly changing version to
+	  differentiate this.
+
+xfsdump-2.0.4 (14 June 2002)
+	- fix xfsrestore/xfsdump version output to report both
+	  their version and the respective dump format version. They
+	  will report their version from cmd/xfsdump/VERSION.
+	- changed the messages printed out for the xfsrestore
+	  interactive mode to emphasize the restore is interactive.
+
+xfsdump-2.0.3 (08 May 2002)
+	- fix xfsdump so that it does not cause segmentation fault
+	  when media specific object id (OPT_MOBJID) is specified
+	  with -I option.
+	- fix similar code for filesystem id (OPT_FSID) option.
+
+xfsdump-2.0.2 (08 May 2002)
+	- in xfsdump, check for ERANGE as well as E2BIG for testing
+	  of the existence of the SGI_XFSDUMP_SKIP_FILE extended
+	  attribute. This only affects dumping using the -e option.
+	  This was motivated by an XFS kernel change from returning
+	  E2BIG into returning ERANGE.
+	- fix "xfsdump -v silent" to really be silent
+
+xfsdump-2.0.1 (13 April 2002)
+	- minor build system updates
+
+xfsdump-2.0.0 (07 February 2002)
+	- rework all code dealing with extended attributes to use
+	  the new system calls (requires attr-2.0.0 or greater)
+	- also, the attrctl-by-handle ioctl is history, replaced
+	  by libhandle routines - more like what we have in IRIX
+	  (requires xfsprogs-2.0.0 or greater)
+	- effectively no-op change (cleanup) - switch over to using
+	  XFS_IOC_FSGEOMETRY instead of XFS_IOC_GETFSUUID ioctl, so
+	  we can deprecate that "special" UUID ioctl in the kernel.
+	- add -q description to xfsdump/xfsrestore man pages and
+	  usage text.
+	- change failed bulkstat WARNING to a TRACE message to that
+	  it doesn't bother people.
+	- avoid a possible assertion failure for cumulative restores
+	  with -B option.
+
+xfsdump-1.1.14 (16 January 2002)
+	- fix xfsrestore so that cumulative restores (with -r)
+	  will successfully delete removed directories whose
+	  files have also been removed.
+	  Previously, the files weren't removed until later,
+	  which meant that early directory removal failed.
+	  SGI bug#844219.
+
+xfsdump-1.1.13 (11 January 2002)
+	- fix xfsdump so that if an inode# is reused in the time
+	  between building the inode map and pruning the inode map
+	  (in phase 3 when some dirs are marked as not changed),
+	  that it no longer aborts with an assertion failure.
+	  SGI bug#846374.
+
+xfsdump-1.1.12 (14 December 2001)
+	- add new -B option to xfsrestore to correctly assign
+	  ownership and permissions of the dump root directory
+	  to the destination directory
+
+xfsdump-1.1.11 (13 December 2001)
+	- port back IRIX changes primarily to xfsrestore for
+	  improving performance when one has over a million files
+	- some extra mlogs (messages) for dump estimates,
+	  dir tree diagnostics, type of dump format being used
+	- various fixes for restore with multiple threads
+	  and extended attributes (note: multiple threads not
+	  implemented on Linux yet)
+
+xfsdump-1.1.10 (10 December 2001)
+	- fix xfsdump to endian convert all of the record header
+	  fields properly just prior to writing the header out
+	  (in particular first_mark_offset).
+	  This caused do_next_mark() assertion failures at some
+	  sites.
+
+xfsdump-1.1.9 (28 November 2001)
+	- fix xfsrestore so that it doesn't delete hardlinks
+	  on alternate cumulative restores
+
+xfsdump-1.1.8 (14 November 2001)
+	- allow xfsdump to exclude files based on whether they have
+	  a certain extended attribute set
+	- don't include /var/lib/xfsdump in the dump
+
+xfsdump-1.1.7 (18 October 2001)
+	- xfsrestore -t will no longer fail if the current working
+	  directory is not xfs
+	- xfsrestore will no longer issue (harmless) warnings related
+	  to space pre-allocation if it is writing to a non-xfs
+	  filesystem
+
+xfsdump-1.1.6 (03 October 2001)
+	- get rid of useless stkchk abstraction
+	  (will no longer get stack info messages with -v proc=debug)
+	- FHS compliance for inventory directory (/var/lib/xfsdump),
+	  and existing installations will continue to work as is.
+	- A future xfsdump release will have an updated xfsinvutil to
+	  allow the old directory to be migrated to the new manually,
+	  without corrupting the inventory (its one or the other only
+	  though, not both, and this is enforced by the tools)
+
+xfsdump-1.1.5 (28 September 2001)
+	- changes for ia64 (e.g. time32_t, getdents, librmt mtget changes)
+	- fix dump/restore to be able to use drive_scsitape with devfs
+
+xfsdump-1.1.4 (18 September 2001)
+	- fix librmt to allow a remote path without "/dev" in its name
+	- this allows xfsdump/xfsrestore to remote file
+	- fix librmt for remote uname to use env variable RSH
+	- add some diagnostics to xfsdump
+
+xfsdump-1.1.3 (27 July 2001)
+	- fixes for (hopefully) the last few nits in libtool usage
+
+xfsdump-1.1.2 (24 July 2001)
+	- merge in phase 3 changes from review and further testing
+	- merge in code to specify maximum file size for xfsdump (-z)
+	- merge in code to specify media file size for xfsdump (-d)
+	- merge in code to request single media file for xfsdump (-S)
+	- merge a couple of minor bug fixes from IRIX
+
+xfsdump-1.1.1 (23 July 2001)
+	- look for libtool archives in /usr/lib, not /lib
+
+xfsdump-1.1.0 (18 July 2001)
+	- rework package to use libtool
+	- merge fsr bug fixes from IRIX
+	- merge xfsdump phase 3 performance fixup from IRIX
+	- enable use of (shared) libhandle.so and libattr.so
+	- re-enable use of libdm.so for DMAPI support
+	- remove some more unused "common" files
+	- man page updates for xfsdump and xfsrestore
+	- moved certain binaries from /usr/sbin into /sbin to
+	  be available for recovery when only root is mounted
+
+xfsdump-1.0.12 (13 July 2001)
+	- Fix mistake introduced in 1.0.10 whereby xfsdump/xfsrestore
+          to remote tape drives will cause rmt debug messages to be
+          written to the remote machine in:
+	      /server.XXX (where XXX = pid).
+	  These files will no longer be created via xfsdump/xfsrestore.
+          The fix is in librmt - it should have only written out
+          warning messages and not debug messages.
+          If the debug environment variable is turned on for librmt then
+          the debug file will go to /tmp/librmt_debug.XXX.
+
+xfsdump-1.0.11 (12 July 2001)
+	- correctly restore block and character device major numbers
+
+xfsdump-1.0.10 (05 July 2001)
+	- produce librmt warning messages from xfsdump/xfsrestore
+          without needing to set an environment variable
+
+xfsdump-1.0.9 (15 May 2001)
+	- correctly [xfs]restore the suid and guid mode bits
+
+xfsdump-1.0.8 (12 May 2001)
+	- added build dependency for Debian on latest devel package
+
+xfsdump-1.0.7 (07 May 2001)
+	- fix warnings, remove last -Wall filter
+	- configure script default man path now /usr/share/man
+	- support realtime files in dump/restore
+	- cleanup arch-specific code, esp. the byteswab routines
+	- as a result, move to -O1 as default for extern inlines
+	- fix bug dumping to remote tape device with given user
+
+xfsdump-1.0.6 (01 May 2001)
+	- remove spurious warnings when dumping quota information
+
+xfsdump-1.0.5 (09 April 2001)
+	- fix use of an uninitialised variable in dump
+	- fix a number of compiler warnings
+
+xfsdump-1.0.4 (03 April 2001)
+	- added xfsdump support for dumping quota information
+
+xfsdump-1.0.3 (28 March 2001)
+	- minor rpm spec file changes
+	- added xfsdq and xfsrq for dumping quota information
+
+xfsdump-1.0.2 (10 January 2001)
+        - support extended attributes in xfsdump and xfsrestore
+
+xfsdump-1.0.1 (30 January 2001)
+        - minor rpm and deb packaging work
+
+xfsdump-1.0.0 (15 January 2001)
+	- dump, restore, fsr and co. abstracted from xfs-cmds package
+        - completed Debian packaging
+        - late beta code
+

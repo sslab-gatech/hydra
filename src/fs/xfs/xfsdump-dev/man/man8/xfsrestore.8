@@ -1,0 +1,804 @@
+.TH xfsrestore 8
+.SH NAME
+xfsrestore \- \&XFS filesystem incremental restore utility
+.SH SYNOPSIS
+.nf
+\f3xfsrestore\f1 \-h
+\f3xfsrestore\f1 [ options ] \-f \f2source\f1 [ \-f \f2source\f1 ... ] \f2dest\f1
+\f3xfsrestore\f1 [ options ] \- \f2dest\f1
+\f3xfsrestore\f1 \-I [ subopt=value ... ]
+.fi
+.\"
+.\" Macro EX: bold constant width example
+.de EX  \" start bold constant width
+.in +.5i
+.ie t .ft CB
+.el .ft B
+.ie t .sp .5v
+.el .sp
+.ta \\w' 'u*8
+.nf
+..
+.de EE \" end bold constant width
+.fi
+.ie t .sp .5v
+.el .sp
+.ft R
+.in
+..
+.SH DESCRIPTION
+.I xfsrestore
+restores filesystems from dumps produced by \f2xfsdump\f1(8).
+Two modes of operation are available:
+simple and cumulative.
+.P
+The default is simple mode.
+.I xfsrestore
+populates the specified destination directory, \f2dest\f1,
+with the files contained in the dump media.
+.P
+The
+.B \-r
+option specifies the cumulative mode.
+Successive invocations of
+.I xfsrestore
+are used to apply a chronologically
+ordered sequence of delta dumps to a base (level 0) dump.
+The contents of the filesystem at the time each dump was produced
+is reproduced.
+This can involve adding, deleting, renaming, linking, and
+unlinking files and directories.
+.P
+A delta dump is defined as either an incremental dump
+(\f2xfsdump\f1
+.B \-l
+option with level > 0)
+or a resumed dump
+(\f2xfsdump\f1
+.B \-R
+option).
+The deltas must be applied in the order they were produced.
+Each delta applied must have been produced with the previously applied
+delta as its base.
+.P
+.I xfsrestore
+keeps state information in the
+.IR xfsrestorehousekeepingdir ,
+to inform subsequent invocations when used in
+cumulative mode, or in the event a restore is interrupted.
+To ensure that the state information can be processed,
+a compatible version of
+.I xfsrestore
+must be used for each subsequent invocation. Additionally,
+each invocation must run on a system of the same endianness
+and page size.
+.P
+The options to
+.I xfsrestore
+are:
+.TP 5
+\f3\-a\f1 \f2housekeeping\f1
+Each invocation of \f2xfsrestore\f1
+creates a directory called
+.IR xfsrestorehousekeepingdir .
+This directory is normally created
+directly under the \f2dest\f1 directory.
+The
+.B \-a
+option allows the operator to specify an alternate directory,
+\f2housekeeping\f1,
+in which
+.I xfsrestore
+creates the
+.I xfsrestorehousekeepingdir
+directory.
+When performing a cumulative (\f3\-r\f1 option) restore or
+resuming (\f3\-R\f1 option) a restore, each successive invocation
+must specify the same alternate directory.
+.TP 5
+\f3\-b\f1 \f2blocksize\f1
+Specifies the blocksize, in bytes, to be used for the restore. 
+For other drives such as DAT or 8 mm , the same blocksize used for the
+xfsdump operation must be specified to restore the tape.
+The default block size is 1Mb.
+.TP 5
+\f3\-c\f1 \f2progname\f1
+Use the specified program to alert the operator when a media change is
+required. The alert program is typically a script to send a mail or
+flash a window to draw the operator's attention.
+.TP 5
+\f3\-e\f1
+Prevents
+.I xfsrestore
+from overwriting existing files in the \f2dest\f1 directory.
+.TP 5
+\f3\-f\f1 \f2source\f1 [ \f3\-f\f1 \f2source\f1 ... ]
+Specifies a source of the dump to be restored.
+This can be the pathname of a device (such as a tape drive),
+a regular file or a remote tape drive (see \f2rmt\f1(8)).
+This option must be omitted if the standard input option
+(a lone
+.B \-
+preceding the \f2dest\f1 specification)
+is specified.
+.TP 5
+.B \-i
+Selects interactive operation.
+Once the on-media directory hierarchy has been read, an
+interactive dialogue is begun.
+The operator uses a small set of commands to peruse the
+directory hierarchy, selecting files and subtrees for extraction.
+The available commands are given below.
+Initially nothing is selected,
+except for those subtrees specified with \f3\-s\f1 command line options.
+.RS
+.TP 15
+\f3ls\f1 [\f2arg\f1]
+List the entries in the current directory or the specified directory,
+or the specified non-directory file entry.
+Both the entry's original inode number and name are displayed.
+Entries that are directories are appended with a `/'.
+Entries that have been selected for extraction are prepended with a `*'.
+.TP
+\f3cd\f1 [\f2arg\f1]
+Change the current working directory to the specified argument, or to the
+filesystem root directory if no argument is specified.
+.TP
+\f3pwd\f1
+Print the pathname of the current directory, relative to the filesystem root.
+.TP
+\f3add\f1 [\f2arg\f1]
+The current directory
+or specified file or directory within the current directory
+is selected for extraction.
+If a directory is specified, then it and all its descendents are
+selected.
+Entries that are selected for extraction are prepended with a `*'
+when they are listed by
+.BR ls .
+.TP
+\f3delete\f1 [\f2arg\f1]
+The current directory
+or specified file or directory within the current directory
+is deselected for extraction.
+If a directory is specified, then it and all its descendents are
+deselected.
+The most expedient way to extract most of the files from a directory
+is to select the directory and then deselect
+those files that are not needed.
+.TP
+\f3extract\f1
+Ends the interactive dialogue, and causes all selected subtrees to be restored.
+.TP
+\f3quit\f1
+.I xfsrestore
+ends the interactive dialogue and immediately exits,
+even if there are files or subtrees selected for extraction.
+.TP
+\f3help\f1
+List a summary of the available commands.
+.RE
+.TP 5
+.B \-m
+Use the minimal tape protocol. 
+This option cannot be used without specifying a blocksize to be used (see 
+.B \-b
+option above). 
+.TP 5
+\f3\-n\f1 \f2file\f1
+Allows
+.I xfsrestore
+to restore only files newer than \f2file\f1.
+The modification time of \f2file\f1
+(i.e., as displayed with the \f3ls \-l\f1 command)
+is compared to the inode modification time
+of each file on the source media
+(i.e., as displayed with the \f3ls \-lc\f1 command).
+A file is restored from media only if its inode modification time
+is greater than or equal to
+the modification time of \f2file\f1.
+.TP 5
+\f3\-o\f1
+Restore file and directory owner/group even if not root.
+When run with an effective user id of root,
+.I xfsrestore
+restores owner and group of each file and directory.
+When run with any other effective user id it does not,
+unless this option is specified.
+.TP 5
+\f3\-p\f1 \f2interval\f1
+Causes progress reports to be printed at intervals of 
+\f2interval\f1 seconds.
+The interval value is approximate, \f2xfsrestore\f1 will
+delay progress reports to avoid undue processing overhead.
+.TP 5
+\f3\-q\f1
+Source tape drive is a QIC tape.  QIC tapes only use a 512 byte
+blocksize, for which \f2xfsrestore\f1 must make special allowances.
+.TP 5
+\f3\-r\f1
+Selects the cumulative mode of operation. The
+.B \-a
+and
+.I destination
+options must be the same for each invocation.
+.TP 5
+\f3\-s\f1 \f2subtree\f1
+Specifies a subtree to restore.
+Any number of
+.B \-s
+options are allowed.
+The restore is constrained to the union of all subtrees specified.
+Each subtree is specified
+as a pathname relative to the restore \f2dest\f1.
+If a directory is specified, the directory and all files beneath
+that directory are restored.
+.TP 5
+.B \-t
+Displays the contents of the dump,
+but does not create or modify any files or directories.
+It may be desirable to set the verbosity level to \f3silent\f1
+when using this option.
+.TP 5
+\f3\-v\f1 \f2verbosity\f1
+.\" set inter-paragraph distance to 0
+.PD 0
+.TP 5
+\f3\-v\f1 \f2subsys\f1=\f2verbosity\f1[,\f2subsys\f1=\f2verbosity\f1,...]
+.PD
+Specifies the level of detail used for messages displayed during the course
+of the restore. The \f2verbosity\f1 argument can be passed as either a string
+or an integer. If passed as a string the following values may be used:
+\f3silent\f1, \f3verbose\f1, \f3trace\f1, \f3debug\f1, or \f3nitty\f1.
+If passed as an integer, values from 0\-5 may be used. The values 0\-4 correspond
+to the strings already listed. The value 5 can be used to produce even more
+verbose debug output.
+
+The first form of this option activates message logging
+across all restore subsystems. The second form allows the message logging level to
+be controlled on a per-subsystem basis. The two forms can be combined 
+(see the example below). The argument \f2subsys\f1 can take one
+of the following values: \f3general\f1, \f3proc\f1, \f3drive\f1, \f3media\f1,
+\f3inventory\f1, and \f3tree\f1.
+
+.ne 2
+For example, to restore the root filesystem
+with tracing activated for all subsystems:
+.EX
+# xfsrestore \-v trace \-f /dev/tape /
+.EE
+.ne 2
+To enable debug-level tracing for drive and media operations:
+.EX
+# xfsrestore \-v drive=debug,media=debug \-f /dev/tape /
+.EE
+.ne 2
+To enable tracing for all subsystems, and debug level tracing for drive operations
+only:
+.EX
+# xfsrestore \-v trace,drive=debug \-f /dev/tape /
+.EE
+.TP 5
+.B \-A
+Do not restore extended file attributes.
+When restoring a filesystem managed within a DMF environment this option
+should not be used. DMF stores file migration status within extended attributes
+associated with each file. If these attributes are not preserved when the
+filesystem is restored, files that had been in migrated state will not be
+recallable by DMF. Note that dumping of extended file attributes is
+also optional.
+.TP 5
+.B \-B
+Change the ownership and permissions of the destination directory
+to match those of the root directory of the dump.
+.TP 5
+.B \-D
+Restore DMAPI (Data Management Application Programming Interface)
+event settings. If the restored filesystem will be managed within the same
+DMF environment as the original dump it is essential that the \-D option
+be used. Otherwise it is not usually desirable to restore these settings.
+.TP 5
+.B \-E
+Prevents
+.I xfsrestore
+from overwriting newer versions of files.
+The inode modification time of the on-media file is compared to the
+inode modification time of corresponding file in the \f2dest\f1
+directory.
+The file is restored only if the on-media version is newer than the version
+in the \f2dest\f1 directory.
+The inode modification time of a file can be displayed with the \f3ls \-lc\f1 command.
+.TP 5
+.B \-F
+Inhibit interactive operator prompts.
+This option inhibits 
+.I xfsrestore
+from prompting the operator for verification of the selected dump 
+as the restore target and from prompting for any media change.
+.TP 5
+.B \-I
+Causes the \f2xfsdump\f1 inventory to be displayed
+(no restore is performed).
+Each time \f2xfsdump\f1 is used, an online inventory
+in \f2/var/lib/xfsdump/inventory\f1 is updated.
+This is used to determine the base for incremental dumps.
+It is also useful for manually identifying a dump session to be restored
+(see the
+.B \-L
+and
+.B \-S
+options).
+Suboptions to filter the inventory display are described later.
+.TP 5
+.B \-J
+Inhibits inventory update when on-media session inventory encountered
+during restore.
+.I xfsrestore
+opportunistically updates the online inventory
+when it encounters an on-media session inventory,
+but only if run with an effective user id of root
+and only if this option is not given.
+.TP 5
+.B \-K
+Force
+.I xfsrestore
+to use dump format 2 generation numbers. Normally the need for this is
+determined automatically, but this option is required on the first
+.I xfsrestore
+invocation in the rare case that a cumulative restore begins
+with a format 3 (or newer) dump and will be followed by a format 2 dump.
+.TP 5
+\f3\-L\f1 \f2session_label\f1
+Specifies the label
+of the dump session to be restored.
+The source media is searched for this label.
+It is any arbitrary string up to 255 characters long.
+The label of the desired dump session can be copied from the inventory display
+produced by the
+.B \-I
+option.
+.TP 5
+\f3\-O\f1 \f2options_file\f1
+Insert the options contained in \f2options_file\f1
+into the beginning of the command line.
+The options are specified just as they would appear if typed into the
+command line.
+In addition, newline characters (\\n) can be used as whitespace.
+The options are placed before all options actually given
+on the command line,
+just after the command name.
+Only one \f3\-O\f1 option can be used.
+Recursive use is ignored.
+The destination directory cannot be specified in \f2options_file\f1.
+.TP 5
+.B \-Q
+Force completion of an interrupted restore session.
+This option is required to work around one specific pathological scenario.
+When restoring a dump session which was interrupted due to an EOM
+condition and no online session inventory is available,
+.I xfsrestore
+cannot know when the restore of that dump session is complete.
+The operator is forced to interrupt the restore session.
+In that case, if the operator tries to subsequently apply
+a resumed dump (using the \f3\-r\f1 option),
+.I xfsrestore
+refuses to do so.
+The operator must tell
+.I xfsrestore
+to consider the base restore complete
+by using this option when applying the resumed dump.
+.TP 5
+.B \-R
+Resume a previously interrupted restore.
+.I xfsrestore
+can be interrupted at any time by pressing the
+terminal interrupt character (see \f2stty\f1(1)).
+Use this option to resume the restore.
+The
+.B \-a
+and
+.I destination
+options must be the same.
+.TP 5
+\f3\-S\f1 \f2session_id\f1
+Specifies the session UUID
+of the dump session to be restored.
+The source media is searched for this UUID.
+The UUID of the desired dump session can be copied from the inventory display
+produced by the
+.B \-I
+option.
+.TP 5
+.B \-T
+Inhibits interactive dialogue timeouts.
+.I xfsrestore
+prompts the operator for media changes.
+This dialogue normally times out if no response is supplied.
+This option prevents the timeout.
+.TP 5
+\f3\-X\f1 \f2subtree\f1
+Specifies a subtree to exclude.
+This is the converse of the
+.B \-s
+option.
+Any number of
+.B \-X
+options are allowed.
+Each subtree is specified
+as a pathname relative to the restore \f2dest\f1.
+If a directory is specified, the directory and all files beneath
+that directory are excluded.
+.TP 5
+\f3\-Y\f1 \f2io_ring_length\f1
+Specify I/O buffer ring length.
+.I xfsrestore
+uses a ring of input buffers to achieve maximum throughput
+when restoring from tape drives.
+The default ring length is 3.
+However, this is not currently enabled on
+Linux yet, making this option benign.
+.TP 5
+.B \-
+A lone
+.B \-
+causes the standard input to be read
+as the source of the dump to be restored.
+Standard input
+can be a pipe from another utility (such as \f2xfsdump\f1(8))
+or a redirected file.
+This option cannot be used with the
+.B \-f
+option.
+The
+.B \-
+must follow all other options, and precede the \f2dest\f1
+specification.
+.P
+The dumped filesystem is restored into the \f2dest\f1 directory.
+There is no default; the \f2dest\f1 must be specified.
+.SH NOTES
+.SS Cumulative Restoration
+A base (level 0) dump and an ordered set of delta dumps can be
+sequentially restored,
+each on top of the previous,
+to reproduce the contents of the original filesystem
+at the time the last delta was produced.
+The operator invokes
+.I xfsrestore
+once for each dump.
+The
+.B \-r
+option must be specified.
+The \f2dest\f1 directory must be the same for all invocations.
+Each invocation leaves a directory named
+.I xfsrestorehousekeeping
+in the \f2dest\f1 directory
+(however, see the
+.B \-a
+option above).
+This directory contains the state information that must be communicated
+between invocations.
+The operator must remove this directory after the last delta
+has been applied.
+.P
+.I xfsrestore
+also generates a directory named
+.I orphanage
+in the \f2dest\f1 directory.
+.I xfsrestore
+removes this directory after completing a simple restore.
+However, if
+.I orphanage
+is not empty,
+it is not removed.
+This can happen if files present on the dump media
+are not referenced by any of the restored directories.
+The
+.I orphanage
+has an entry for each such file.
+The entry name is the file's original inode number,
+a ".",
+and the file's generation count modulo 4096
+(only the lower 12 bits of the generation count are used).
+.P
+.I xfsrestore
+does not remove the
+.I orphanage
+after cumulative restores.
+Like the
+.I xfsrestorehousekeeping
+directory,
+the operator must remove it after applying all delta dumps.
+.SS Media Management
+A dump consists of one or more media files
+contained on one or more media objects.
+A media file contains all or a portion of the filesystem dump.
+Large filesystems are broken up into multiple media files
+to minimize the impact of media dropouts,
+and to accommodate media object boundaries (end-of-media).
+.P
+A media object is any storage medium:
+a tape cartridge,
+a remote tape device (see \f2rmt\f1(8)),
+a regular file,
+or the standard input
+(currently other removable media drives are not supported).
+Tape cartridges can contain multiple media files,
+which are typically separated by
+(in tape parlance)
+file marks.
+If a dump spans multiple media objects,
+the restore must begin with the media object containing the
+first media file dumped.
+The operator is prompted when the next media object is needed.
+.P
+Media objects can contain more than one dump.
+The operator can select the desired dump
+by specifying the dump label
+.RB ( \-L
+option),
+or by specifying the dump UUID
+.RB ( \-S
+option).
+If neither is specified,
+\f2xfsrestore\f1 scans the entire media object,
+prompting the operator as each dump session is encountered.
+.P
+The inventory display
+.RB ( \-I
+option) is useful for
+identifying the media objects required.
+It is also useful for identifying a dump session.
+The session UUID can be copied from the inventory display
+to the
+\f3\-S\f1 option argument
+to unambiguously identify a dump session to be restored.
+.P
+Dumps placed in regular files or the standard output
+do not span multiple media objects,
+nor do they contain multiple dumps.
+.SS Inventory
+Each dump session updates an inventory database in \f2/var/lib/xfsdump/inventory\f1.
+This database can be displayed by invoking
+.I xfsrestore
+with the
+.B \-I
+option.
+The display uses tabbed indentation to present the inventory
+hierarchically.
+The first level is filesystem.
+The second level is session.
+The third level is media stream (currently only one stream is supported).
+The fourth level lists the media files sequentially composing the stream.
+.P
+The following suboptions are available to filter the display.
+.TP 5
+\f3\-I depth=\f1\f2n\f1
+(where
+.I n
+is 1, 2, or 3) limits the hierarchical depth of the display. When
+.I n
+is 1, only the filesystem information from the inventory is displayed. When
+.I n
+is 2, only filesystem and session information are displayed. When
+.I n
+is 3, only filesystem, session and stream information are displayed.
+.TP 5
+\f3\-I level=\f1\f2n\f1
+(where
+.I n
+is the dump level) limits the display to dumps of that particular dump level.
+.P
+The display may be restricted to media files contained in a specific
+media object.
+.TP 5
+\f3\-I mobjid=\f1\f2value\f1
+(where
+.I value
+is a media ID) specifies the media object by its media ID.
+.TP 5
+\f3\-I mobjlabel=\f1\f2value\f1
+(where
+.I value
+is a media label) specifies the media object by its media label.
+.P
+Similarly, the display can be restricted to a specific filesystem.
+.TP 5
+\f3\-I mnt=\f1\f2mount_point\f1
+(that is, [hostname:]pathname), identifies the filesystem by
+mountpoint.  Specifying the hostname is optional, but may be useful
+in a clustered environment where more than one host can be responsible
+for dumping a filesystem.
+.TP 5
+\f3\-I fsid=\f1\f2filesystem_id\f1
+identifies the filesystem by filesystem ID.
+.TP 5
+\f3\-I dev=\f1\f2device_pathname\f1
+(that is, [hostname:]device_pathname) identifies the filesystem by
+device.  As with the
+.B mnt
+filter, specifying the hostname is optional.
+.P
+More than one of these suboptions, separated by commas, may be specified
+at the same time to limit the display of the inventory to
+those dumps of interest.
+However, at most four suboptions can be specified at once:
+one to constrain the display hierarchy depth,
+one to constrain the dump level,
+one to constrain the media object,
+and one to constrain the filesystem.
+.P
+For example,
+.B \-I depth=1,mobjlabel="tape 1",mnt=host1:/test_mnt
+would display only the filesystem information (depth=1) for
+those filesystems that were mounted on \f2host1:/test_mnt\f1
+at the time of the dump,
+and only those filesystems dumped to the media object labeled "tape 1".
+.P
+Dump records may be removed (pruned) from the inventory using the
+.I xfsinvutil
+program.
+.P
+An additional media file is placed
+at the end of each dump stream.
+This media file contains the inventory information for the
+current dump session.  If the online inventory files in
+.I /var/lib/xfsdump/inventory
+are missing information for the current dump session, then
+the inventory information in the media file is automatically
+added to the files in
+.I /var/lib/xfsdump/inventory.
+If you wish to incorporate the inventory information from the
+media file without restoring any data, you may do so using the
+.B \-t
+option:
+.EX
+# xfsrestore \-t \-f /dev/tape
+.EE
+This is useful to rebuild the inventory database if it
+is ever lost or corrupted.  The only caveat is that
+.I xfsrestore
+needs to read through the entire dump in order to reach
+the inventory media file.  This could become time
+consuming for dump sessions with large media files.
+.SS Media Errors
+\f2xfsdump\f1 is tolerant of media errors,
+but cannot do error correction.
+If a media error occurs in the body of a media file,
+the filesystem file represented at that point is
+lost.
+The bad portion of the media is skipped,
+and the restoration resumes at the next filesystem file
+after the bad portion of the media.
+.P
+If a media error occurs in the beginning of the
+media file,
+the entire media file is lost.
+For this reason,
+large dumps are broken into a number
+of reasonably sized media files.
+The restore resumes with the next media file.
+.SS Quotas
+When
+.I xfsdump
+dumps a filesystem with user quotas, it creates a file in the root of the
+dump called
+.IR xfsdump_quotas .
+.I xfsrestore
+can restore this file like any other file included in the dump.  This
+file can be processed by the restore command of
+.IR xfs_quota (8)
+to reactivate the quotas.  However, the
+.I xfsdump_quotas
+file contains information which may first require modification;
+specifically the filesystem name and the user ids.  If you are
+restoring the quotas for the same users on the same filesystem from
+which the dump was taken, then no modification will be necessary.
+However, if you are restoring the dump to a different filesystem, you
+will need to:
+.HP
+-
+ensure the new filesystem is mounted with the
+quota
+option
+.HP
+-
+modify the
+.I xfsdump_quotas
+file to contain the new filesystem name
+.HP
+-
+ensure the uids in the
+.I xfsdump_quotas
+file are correct
+.P
+Once the quota information has been verified, the restore command of
+.I xfs_quota (8)
+can be used to apply the quota limits to the filesystem.
+.P
+Group and project quotas are handled in a similar fashion and will
+be restored in files called
+.IR xfsdump_quotas_group
+and
+.IR xfsdump_quotas_proj ,
+respectively.
+.SH EXAMPLES
+To restore the root filesystem from a locally mounted tape:
+.EX
+# xfsrestore \-f /dev/tape /
+.EE
+To restore from a remote tape, specifying the dump session id:
+.EX
+# xfsrestore \-L session_1 \-f otherhost:/dev/tape /new
+.EE
+To restore the contents a of a dump to another subdirectory:
+.EX
+# xfsrestore \-f /dev/tape /newdir
+.EE
+To copy the contents of a filesystem to another directory (see \f2xfsdump\f1(8)):
+.EX
+# xfsdump \-J \- / | xfsrestore \-J \- /new
+.EE
+.SH FILES
+.TP 25
+/var/lib/xfsdump/inventory
+dump inventory database
+.SH SEE ALSO
+rmt(8),
+xfsdump(8),
+xfsinvutil(8),
+xfs_quota(8),
+attr_set(2).
+.SH DIAGNOSTICS
+The exit code is 0 on normal completion,
+and non-zero if an error occurred or the restore was terminated by the operator.
+.P
+For all verbosity levels greater than 0 (\f3silent\f1) the final line of the output
+shows the exit status of the restore. It is of the form:
+.EX
+xfsdump: Restore Status: \f2code\f1
+.EE
+Where \f2code\f1 takes one of the following values:
+\f3SUCCESS\f1 (normal completion),
+\f3INTERRUPT\f1 (interrupted),
+\f3QUIT\f1 (media no longer usable),
+\f3INCOMPLETE\f1 (restore incomplete),
+\f3FAULT\f1 (software error), and
+\f3ERROR\f1 (resource error).
+Every attempt will be made to keep both the syntax and the semantics of this
+log message unchanged in future versions of xfsrestore.
+However, it may be necessary to refine or expand the set of exit codes, or
+their interpretation at some point in the future.
+.SH BUGS
+Pathnames of restored non-directory files
+(relative to the \f2dest\f1 directory)
+must be 1023 characters (MAXPATHLEN) or less.
+Longer pathnames are discarded
+and a warning message displayed.
+.P
+There is no verify option to \f2xfsrestore\f1.
+This would allow the operator to compare a filesystem dump to
+an existing filesystem,
+without actually doing a restore.
+.P
+The interactive commands (\f3\-i\f1 option) do not understand
+regular expressions.
+.P
+When the minimal rmt option is specified, \f2xfsrestore\f1 applies it to 
+all remote tape sources. The same blocksize (specified by the 
+.B \-b
+option) is used for all these remote drives.
+.P
+.I xfsrestore
+uses the alert program only when a media change is required. 
+.P
+Cumulative mode (\f3\-r\f1 option) requires that the operator invoke
+.I xfsrestore
+for the base and for each delta to be applied in sequence to the base.
+It would be better to allow the operator to identify the last delta
+in the sequence of interest,
+and let
+.I xfsrestore
+work backwards from that delta to identify
+and apply the preceding deltas and base dump,
+all in one invocation.

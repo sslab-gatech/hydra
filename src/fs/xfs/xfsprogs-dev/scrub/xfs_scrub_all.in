@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+
+# Run online scrubbers in parallel, but avoid thrashing.
+#
+# Copyright (C) 2018 Oracle.  All rights reserved.
+#
+# Author: Darrick J. Wong <darrick.wong@oracle.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it would be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write the Free Software Foundation,
+# Inc.,  51 Franklin St, Fifth Floor, Boston, MA  02110-1301, USA.
+
+import subprocess
+import json
+import threading
+import time
+import sys
+import os
+
+retcode = 0
+terminate = False
+
+def DEVNULL():
+	'''Return /dev/null in subprocess writable format.'''
+	try:
+		from subprocess import DEVNULL
+		return DEVNULL
+	except ImportError:
+		return open(os.devnull, 'wb')
+
+def find_mounts():
+	'''Map mountpoints to physical disks.'''
+
+	fs = {}
+	cmd=['lsblk', '-o', 'KNAME,TYPE,FSTYPE,MOUNTPOINT', '-J']
+	result = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+	result.wait()
+	if result.returncode != 0:
+		return fs
+	sarray = [x.decode('utf-8') for x in result.stdout.readlines()]
+	output = ' '.join(sarray)
+	bdevdata = json.loads(output)
+	# The lsblk output had better be in disks-then-partitions order
+	for bdev in bdevdata['blockdevices']:
+		if bdev['type'] in ('disk', 'loop'):
+			lastdisk = bdev['kname']
+		if bdev['fstype'] == 'xfs':
+			mnt = bdev['mountpoint']
+			if mnt is None:
+				continue
+			if mnt in fs:
+				fs[mnt].add(lastdisk)
+			else:
+				fs[mnt] = set([lastdisk])
+	return fs
+
+def kill_systemd(unit, proc):
+	'''Kill systemd unit.'''
+	proc.terminate()
+	cmd=['systemctl', 'stop', unit]
+	x = subprocess.Popen(cmd)
+	x.wait()
+
+def run_killable(cmd, stdout, killfuncs, kill_fn):
+	'''Run a killable program.  Returns program retcode or -1 if we can't start it.'''
+	try:
+		proc = subprocess.Popen(cmd, stdout = stdout)
+		real_kill_fn = lambda: kill_fn(proc)
+		killfuncs.add(real_kill_fn)
+		proc.wait()
+		try:
+			killfuncs.remove(real_kill_fn)
+		except:
+			pass
+		return proc.returncode
+	except:
+		return -1
+
+def run_scrub(mnt, cond, running_devs, mntdevs, killfuncs):
+	'''Run a scrub process.'''
+	global retcode, terminate
+
+	print("Scrubbing %s..." % mnt)
+	sys.stdout.flush()
+
+	try:
+		if terminate:
+			return
+
+		# Try it the systemd way
+		cmd=['systemctl', 'start', 'xfs_scrub@%s' % mnt]
+		ret = run_killable(cmd, DEVNULL(), killfuncs, \
+				lambda proc: kill_systemd('xfs_scrub@%s' % mnt, proc))
+		if ret == 0 or ret == 1:
+			print("Scrubbing %s done, (err=%d)" % (mnt, ret))
+			sys.stdout.flush()
+			retcode |= ret
+			return
+
+		if terminate:
+			return
+
+		# Invoke xfs_scrub manually
+		cmd=['@sbindir@/xfs_scrub', '@scrub_args@', mnt]
+		ret = run_killable(cmd, None, killfuncs, \
+				lambda proc: proc.terminate())
+		if ret >= 0:
+			print("Scrubbing %s done, (err=%d)" % (mnt, ret))
+			sys.stdout.flush()
+			retcode |= ret
+			return
+
+		if terminate:
+			return
+
+		print("Unable to start scrub tool.")
+		sys.stdout.flush()
+	finally:
+		running_devs -= mntdevs
+		cond.acquire()
+		cond.notify()
+		cond.release()
+
+def main():
+	'''Find mounts, schedule scrub runs.'''
+	def thr(mnt, devs):
+		a = (mnt, cond, running_devs, devs, killfuncs)
+		thr = threading.Thread(target = run_scrub, args = a)
+		thr.start()
+	global retcode, terminate
+
+	fs = find_mounts()
+
+	# Tail the journal if we ourselves aren't a service...
+	journalthread = None
+	if 'SERVICE_MODE' not in os.environ:
+		try:
+			cmd=['journalctl', '--no-pager', '-q', '-S', 'now', \
+					'-f', '-u', 'xfs_scrub@*', '-o', \
+					'cat']
+			journalthread = subprocess.Popen(cmd)
+		except:
+			pass
+
+	# Schedule scrub jobs...
+	running_devs = set()
+	killfuncs = set()
+	cond = threading.Condition()
+	while len(fs) > 0:
+		if len(running_devs) == 0:
+			mnt, devs = fs.popitem()
+			running_devs.update(devs)
+			thr(mnt, devs)
+		poppers = set()
+		for mnt in fs:
+			devs = fs[mnt]
+			can_run = True
+			for dev in devs:
+				if dev in running_devs:
+					can_run = False
+					break
+			if can_run:
+				running_devs.update(devs)
+				poppers.add(mnt)
+				thr(mnt, devs)
+		for p in poppers:
+			fs.pop(p)
+		cond.acquire()
+		try:
+			cond.wait()
+		except KeyboardInterrupt:
+			terminate = True
+			print("Terminating...")
+			sys.stdout.flush()
+			while len(killfuncs) > 0:
+				fn = killfuncs.pop()
+				fn()
+			fs = []
+		cond.release()
+
+	if journalthread is not None:
+		journalthread.terminate()
+
+	# See the service mode comments in xfs_scrub.c for why we do this.
+	if 'SERVICE_MODE' in os.environ:
+		time.sleep(2)
+		if retcode != 0:
+			retcode = 1
+
+	sys.exit(retcode)
+
+if __name__ == '__main__':
+	main()

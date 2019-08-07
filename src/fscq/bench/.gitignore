@@ -1,0 +1,8 @@
+/*-*.out
+/*-*.blktrace
+/testsync
+/atomic-create
+/filesync
+/filewrite
+/largefile
+/smallfile

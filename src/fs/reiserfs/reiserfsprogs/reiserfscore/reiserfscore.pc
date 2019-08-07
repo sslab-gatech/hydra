@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: reiserfscore
+Description: ReiserFS Core Library
+Version: 3.6.27
+Cflags: -I${includedir}/reiserfs -I${includedir}
+Libs: -L${libdir} -lreiserfscore

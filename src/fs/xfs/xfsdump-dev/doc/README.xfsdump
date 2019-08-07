@@ -1,0 +1,168 @@
+---------------------------------
+Notes on using xfsdump/xfsrestore
+---------------------------------
+
+Contents
+----------
+Disclaimer
+Example usage 
+Testing of xfsdump 
+Command Option Changes from IRIX xfsdump to Linux
+Notes on tape block sizes
+Restoring an IRIX dump tape onto a Linux xfs filesystem
+TODO List
+
+
+Disclaimer
+----------
+Testing of this software has been done using the Linux 
+scsi tape driver only. If one is using a different tape
+driver one may need to use the -m option which makes
+less assumptions about the tape driver's capabilities.
+
+Example usage 
+-------------
+
+1. Dumping a filesystem to a dump file:
+   xfsdump -f dump_file -L session_label -M media_label file_system
+   e.g. xfsdump -f ./mydump -L 'session1' -M 'media1" /mnt/xfs0 
+
+2. Restoring a filesystem from a dump file:
+   xfsrestore -f ./mydump -L session_label dest_dir
+   e.g. xfsrestore -f ./mydump -L 'session1' ./myfilesystem 
+
+3. Dumping a filesystem to a dump tape:
+   xfsdump -f tapedevice -L session_label -M media_label file_system
+   e.g. xfsdump -f /dev/st0 -L 'session1' -M 'media1" /mnt/xfs0 
+
+4. Restoring a filesystem from a dump tape:
+   xfsrestore -f tapedevice -L session_label dest_dir
+   e.g. xfsrestore -f /dev/st0 -L 'session1' ./myfilesystem
+
+
+Testing of xfsdump 
+------------------
+
+There are scripts in the stress directory which
+verify that xfsdump and xfsrestore are working.
+Use "grep xfsdump group" to see which tests they are.
+
+Stress/common.config needs to be updated for one's host with:
+   SCRATCH_DEV      - device for test filesystem
+   SCRATCH_MNT      - mount point for test filesystem
+   TAPE_DEV         - tape device e.g. /dev/st0
+   RMT_TAPE_DEV     - remote tape device
+   RMT_IRIXTAPE_DEV - remote IRIX tape device
+   RMT_TAPE_USER    - remote user for tape device
+The first two above are absolutely necessary.
+The tape device variables are only needed if one wants
+to test out that particular functionality of xfsdump/xfsrestore.
+The RMT_* variables are needed for testing remote tape capability.
+
+With the common.config updated one should be able to run
+as root: 
+# ./check -g xfsdump
+
+
+Command Option Changes from IRIX xfsdump to Linux
+-------------------------------------------------
+
+Xfsdump on Linux has been changed (from the IRIX version)
+to allow the -b option to be used without the -m option. 
+In IRIX, the block size could only be specified if one selected
+the minimum remote (-m) option. This means that one can now
+override the block size to use for dumping and restoring 
+from tape, with an upper limit of 2Mb.
+
+The semantics of the -m option has also changed. In IRIX, this
+option would only take effect for remote tape specifications.
+In the Linux version, the -m option can be used for local tapes
+where the tape device only has a restricted set of mt(1) commands.
+
+The -q option has been added to tell xfsdump/xfsrestore explicitly
+that a QIC tape drive is being used. In IRIX, an i/o control system
+call is issued which returns the subtype of tape device being used;
+for example "TPQIC*". However, there is no direct equivalent in Linux.
+
+
+Notes on tape block sizes
+-------------------------
+The IRIX version of xfsdump has typically used 2Mb tape blocks
+for writing local dumps to tape. The size is actually calculated by
+getting the maximum block size supported from the tape device 
+($mt blksize) and capping it at 2Mb (i.e. min(2Mb, blk-size-max)). 
+On Linux, the maximum block size is not exported by the scsi tape driver,
+and has been set to have a default of 1Mb.  
+
+In some experiments with a 2Mb block size, we found that sometimes
+read and writes using the scsi tape driver would fail:
+    /tmp/xfsdump: tape op: writing 2097152 bytes
+    /tmp/xfsdump: tape op write of 2097152 bytes failed: errno == 75 (Value too large for defined data type)
+It apparently fails when scsi_init_malloc() fails with EOVERFLOW.
+According to Kai Makisara, the tape drive supports scatter/gather
+and has a default of 16 segments of 128K or 256K with the
+first segment of only 32K. So with 128K segments we have,
+15 * 128k + 32 K = 1952K (short of 2Mb). 
+Thus in order to use large block buffers requires one
+to increase the number of segments, "max_sg_segs".
+A suggested number to use is 64 segments (it apparently depends
+on the scsi adapter, but it has been suggested that most should
+handle at least 64).
+This can be done by either:
+  - insmod st max_sg_segs=64
+  - add to /etc/modules.conf:
+    options st max_sg_segs=64
+  - add to boot command line:
+    st=max_sg_segs:64
+
+The IRIX version of xfsdump has typically used 240K tape blocks
+for writing remote dumps to tape. 
+
+The Linux ext2 dump program and tar(1) would not have this problem
+as they use 10K default blocks which can be increased using the
+-b option (up to a maximum of 64K blocks for dump(1)). 
+
+Using a smaller block size
+--------------------------
+Sometimes a tape device will not support large blocksizes of 1Mb.
+The scsi tape driver outputs the maximum block size the tape
+supports in the syslog.
+For example:
+  st0: Block limits 1 - 245760 bytes.
+Unfortunately, the scsi tape driver does not export the maximum
+block size (other than via the syslog), therefore xfsdump/xfsrestore
+can not adjust the blocksize automatically.
+In this case, one should specify this maximum blocksize as
+the blocksize for xfsdump/xfsrestore to use with the -b option.
+For example:
+  xfsdump -b 245760 -f /dev/st0 -M media -L session /
+Blocksizes of less than 240K have not be tested.
+
+
+Restoring an IRIX dump tape onto a Linux xfs filesystem
+-------------------------------------------------------
+
+To restore an IRIX xfs dump tape, one will need to specify
+the blocksize that was used by giving a -b option. 
+
+Examples:
+
+For 2Mb blocks:
+xfsrestore -f /dev/st0 -b 2097152 -L 'session1' dest_dir
+
+For 240K blocks (a remotely dumped tape):
+xfsrestore -f /dev/st0 -b 245760 -L 'session1' dest_dir 
+
+If errors such as:
+  /tmp/xfsdump: tape op write of 2097152 bytes failed: errno == 75 (Value too large for defined data type)
+occur, then one may need to increase the number of segments used
+by the scsi tape driver (max_sg_segs) as mentioned above.
+
+
+TODO List
+---------
+
+* fix up xfsdump/xfsrestore to run multi-threaded 
+  (needs pthreads & locking code)
+* complete the port of xfs_copy 
+  (needs pthreads & locking code)

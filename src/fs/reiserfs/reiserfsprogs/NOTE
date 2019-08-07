@@ -1,0 +1,1 @@
+libtoolize --copy --install --force && aclocal && autoheader && autoconf && automake --add-missing

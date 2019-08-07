@@ -1,0 +1,7 @@
+*.img
+vfat_standalone
+vfat_general_standalone
+fat-fsfuzz
+fat-tfuzz
+*.o
+*.so

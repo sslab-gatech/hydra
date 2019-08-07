@@ -1,0 +1,167 @@
+AT_TESTED([mkfs.gfs2])
+AT_BANNER([mkfs.gfs2 tests])
+
+AT_SETUP([Locking protocol validation])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+AT_CHECK([$GFS_MKFS -p badprotocol $GFS_TGT], 255, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Resource group size validation])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 31 $GFS_TGT], 255, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 2049 $GFS_TGT], 255, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Journal size validation])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+AT_CHECK([$GFS_MKFS -p lock_nolock -J 7 $GFS_TGT], 255, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -J 1025 $GFS_TGT], 255, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Block count validation])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_TGT_REGEN
+AT_CHECK([$GFS_MKFS -p lock_nolock -b 512 $GFS_TGT $(($(gfs_max_blocks 512)+1))], 255, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -b 4096 $GFS_TGT $(($(gfs_max_blocks 4096)+1))], 255, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Quota change file size validation])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+AT_CHECK([$GFS_MKFS -p lock_nolock -c 0 $GFS_TGT], 255, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -c 65 $GFS_TGT], 255, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Locking protocols])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock $GFS_TGT])
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_dlm -t foo:bar $GFS_TGT])
+AT_CLEANUP
+
+AT_SETUP([Valid block sizes 512-4096])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -b 512 $GFS_TGT])
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -b 1024 $GFS_TGT])
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -b 2048 $GFS_TGT])
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -b 4096 $GFS_TGT])
+AT_CLEANUP
+
+AT_SETUP([Max. blocks, min. block size])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -b 512 $GFS_TGT $(gfs_max_blocks 512)])
+AT_CLEANUP
+
+AT_SETUP([Max. blocks, max. block size])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -b 4096 $GFS_TGT $(gfs_max_blocks 4096)])
+AT_CLEANUP
+
+AT_SETUP([Max. resource group size])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -r 2048 $GFS_TGT])
+AT_CLEANUP
+
+AT_SETUP([Min. resource group size])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -r 32 $GFS_TGT])
+AT_CLEANUP
+
+AT_SETUP([Max. resource group size, min. block size])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -r 2048 -b 512 $GFS_TGT])
+AT_CLEANUP
+
+AT_SETUP([Max. journal size])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -J 1024 $GFS_TGT])
+AT_CLEANUP
+
+AT_SETUP([Min. journal size])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -J 8 $GFS_TGT])
+AT_CLEANUP
+
+AT_SETUP([Max. quota change file size])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -c 64 $GFS_TGT])
+AT_CLEANUP
+
+AT_SETUP([Min. quota change file size])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -c 1 $GFS_TGT])
+AT_CLEANUP
+
+AT_SETUP([Lock table validation])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+AT_CHECK([$GFS_MKFS -p lock_nolock -t "" $GFS_TGT], 255, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -t "123456789012345678901234567890123:12345678" $GFS_TGT], 255, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -t "12345678901234567:1234567890123456789012345678901" $GFS_TGT], 255, [ignore], [ignore])
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_nolock -t "12345678901234567890123456789012:123456789012345678901234567890" $GFS_TGT])
+AT_CHECK([$GFS_MKFS -p lock_dlm -t "" $GFS_TGT], 255, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_dlm -t "quite_long_cluster_name_test_here:intec34p" $GFS_TGT], 255, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_dlm -t "financial_cluster:this_time_we_test_fs_naming_len" $GFS_TGT], 255, [ignore], [ignore])
+GFS_FSCK_CHECK([$GFS_MKFS -p lock_dlm -t "a_really_long_named_cluster_here:concurrently_lets_check_fs_len" $GFS_TGT])
+AT_CLEANUP
+
+# -o test_topology order:
+# alignment_offset,
+# logical_sector_size,
+# minimum_io_size,
+# optimal_io_size,
+# physical_sector_size
+
+AT_SETUP([Device i/o limits handling])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+AT_CHECK([$GFS_MKFS -p lock_nolock -o test_topology=0:0:0:0:0 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -o test_topology=7168:512:0:33553920:512 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -o test_topology=7168:512:8192:33553920:512 $GFS_TGT], 0, [ignore], [Warning: device is not properly aligned. This may harm performance.
+])
+AT_CLEANUP
+
+AT_SETUP([Resource group alignment])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+AT_CHECK([$GFS_MKFS -p lock_nolock -o test_topology=0:512:65536:393216:512 $GFS_TGT], 0, [ignore], [ignore])
+# Check rgrp alignment to minimum_io_size: 65536 / 4096 == 16
+AT_CHECK([gfs2_edit -p rindex $GFS_TGT | grep ri_addr | awk '{print $2, $2 % 16; if ($2 % 16 != 0) { exit 1 }}'], 0, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Values of rg_skip])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 2048 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgskipcheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 1024 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgskipcheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 512 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgskipcheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 219 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgskipcheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 32 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgskipcheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -o test_topology=0:512:65536:393216:512 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgskipcheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Values of rg_data0, rg_data, rg_bitbytes])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 2048 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgrifieldscheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 1024 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgrifieldscheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 512 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgrifieldscheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 219 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgrifieldscheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -r 32 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgrifieldscheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([$GFS_MKFS -p lock_nolock -o test_topology=0:512:65536:393216:512 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([rgrifieldscheck.sh $GFS_TGT], 0, [ignore], [ignore])
+AT_CLEANUP
+
+AT_SETUP([Small filesystems])
+AT_KEYWORDS(mkfs.gfs2 mkfs)
+GFS_TGT_SIZE(32M)
+AT_CHECK([$GFS_MKFS -p lock_nolock $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([fsck.gfs2 -n $GFS_TGT], 0, [ignore], [ignore])
+GFS_TGT_SIZE(64M)
+AT_CHECK([$GFS_MKFS -p lock_nolock -j2 $GFS_TGT], 0, [ignore], [ignore])
+AT_CHECK([fsck.gfs2 -n $GFS_TGT], 0, [ignore], [ignore])
+AT_CLEANUP

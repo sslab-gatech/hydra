@@ -1,0 +1,4 @@
+To build..
+use OPAM 4.07.0 to install coqc-8.8.1
++ Must use clang-3.7, clang++-3.7 and opt-3.7 to build afl-fscq-syscall/llvm_mode
+

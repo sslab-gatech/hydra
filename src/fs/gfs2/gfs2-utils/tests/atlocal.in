@@ -1,0 +1,8 @@
+GFS_TGT="$abs_builddir/testvol"
+GFS_TGT_SZ=10
+GFS_MKFS="mkfs.gfs2 -O -D"
+
+gfs_max_blocks()
+{
+	printf $((GFS_TGT_SZ*1073741824/$1))
+}

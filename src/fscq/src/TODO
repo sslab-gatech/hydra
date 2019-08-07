@@ -1,0 +1,39 @@
+- TRIM support (TRIM opcode randomizes block contents)
+
+- extraction without Haskell
+- integrate into MirageOS unikernel by extracting to OCaml
+- extraction into Go to combine with Biscuit
+- explore Mtac as an alternative to Ltac
+
+- better syntax for predicates (from paper)
+- better automation support for words
+- better automation support for stopping at well-defined points
+- use http://why.lri.fr/ or http://why3.lri.fr/ to integrate Z3 into Coq
+- use Canonical Structure for defaults
+- db transaction system (abort)
+- combine Verdi's Paxos with FSCQ for stable storage, prove end-to-end theorem
+  under both network and node failures (how to combine different spec styles??)
+- provably secure sandbox on top of fscq
+- concurrent transactions
+
+===
+
+- dwrite without calling flushall in GroupLog
+- better fallback behavior in flushall in GroupLog
+- use BlockPtr read_range for BFILE.shrink
+
+- prove [umount_ok]
+
+- prove AtomicCp
+- prove that unlink never fails
+- clean up DirTree (no lists, update_subtree_helper, etc)
+- bring back ByteFile
+- high-performance extraction
+- simplify AtomicCp proofs
+  apply pred to diskset
+- more applications
+- security specs: need to deal with non-determinism, and at the lowest level,
+  need to change the semantics to show that the disk independently chooses
+  which valu to preserve from a valuset (i.e., non-interference between sector
+  crashes)
+

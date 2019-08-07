@@ -1,0 +1,88 @@
+.TH fsck.gfs2 8
+
+.SH NAME
+fsck.gfs2 - Offline GFS and GFS2 file system checker
+
+.SH SYNOPSIS
+.B fsck.gfs2
+[\fIOPTION\fR]... \fIDEVICE\fR
+
+.SH WARNING
+All computers \fImust\fP have the filesystem unmounted before running
+fsck.gfs2.  Failure to unmount from all nodes in a cluster will likely result
+in filesystem corruption.
+
+.SH DESCRIPTION
+fsck.gfs2 will check that the GFS or GFS2 file system on a device is structurally valid.
+It should not be run on a mounted file system.  If file system corruption is
+detected, it will attempt to repair the file system.  There is a limit to what
+fsck.gfs2 can do.  If important file system structures are destroyed, such that
+the checker cannot determine what the repairs should be, reparations could
+fail.
+
+GFS2 is a journaled file system, and as such should be able to repair damage to
+the file system on its own.  However, faulty hardware has the ability to write
+incomplete blocks to a file system thereby causing corruption that GFS2 cannot
+fix.  The first step to ensuring a healthy file system is the selection of
+reliable hardware (i.e. storage systems that will write complete blocks - even
+in the event of power failure).
+
+Note: Most file system checkers will not check the file system if it is
+"clean" (i.e. unmounted since the last use).  The fsck.gfs program behaves
+differently because the storage may be shared among several nodes in a
+cluster, and therefore problems may have been introduced on a different
+computer.  Therefore, fsck.gfs2 will always check the file system unless
+the -p (preen) option is used, in which case it follows special rules
+(see below).
+
+fsck.gfs2 will log to the system log on start and exit to aid debugging and
+administration.
+.SH OPTIONS
+.TP
+\fB-a\fP
+Same as the \fB-p\fP (preen) option.
+.TP
+\fB-f\fP
+Force checking even if the file system seems clean.
+.TP
+\fB-h\fP
+Help.
+
+This prints out the proper command line usage syntax.
+.TP
+\fB-q\fP
+Quiet.
+.TP
+\fB-n\fP
+No to all questions. By specifying this option, fsck.gfs2 will only show the changes that
+would be made, but not make any changes to the filesystem.
+
+This option may not be used with the \fB-y\fP or \fB-p\fP/\fB-a\fP options.
+.TP
+\fB-p\fP
+Automatically repair ("preen") the file system if it is dirty and safe to do so,
+otherwise exit.
+
+If the file system has locking protocol \fIlock_nolock\fR, it is considered a
+non-shared storage device and it is considered safe.  If the locking protocol
+is lock_dlm and \fB-a\fP or \fB-p\fP was specified, the check is considered unsafe as it
+cannot be determined whether the device is mounted by other nodes in the cluster.
+In this case a warning is given if any damage or dirty journals are found. The
+file system should then be unmounted from all nodes in the cluster and
+fsck.gfs2 should be run manually without the \fB-a\fP or \fB-p\fP options.
+
+This option may not be used with the \fB-n\fP or \fB-y\fP options.
+.TP
+\fB-V\fP
+Print out the program version information.
+.TP
+\fB-v\fP
+Verbose operation.
+
+Print more information while running.
+.TP
+\fB-y\fP
+Yes to all questions. By specifying this option, fsck.gfs2 will not prompt before making
+changes.
+
+This option may not be used with the \fB-n\fP or \fB-p\fP/\fB-a\fP options.

@@ -1,0 +1,7 @@
+*.img
+reiserfs_standalone
+reiserfs_general_standalone
+reiserfs-fsfuzz
+reiserfs-tfuzz
+*.o
+*.so

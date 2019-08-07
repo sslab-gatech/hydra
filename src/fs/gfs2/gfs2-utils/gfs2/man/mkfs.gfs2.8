@@ -1,0 +1,149 @@
+.TH mkfs.gfs2 8
+
+.SH NAME
+mkfs.gfs2 - create a gfs2 filesystem
+
+.SH SYNOPSIS
+.B mkfs.gfs2
+[\fIoptions\fR] \fIdevice\fR \fI[block-count]\fR
+
+.SH DESCRIPTION
+mkfs.gfs2 is used to create a gfs2 file system.
+
+.SH OPTIONS
+The default values of the following options have been chosen for best results.
+In most cases, there should be no need to choose different values. The
+exceptions to this are the number of journals (\fB-j\fP) and the lock table
+(\fB-t\fP), as these options will be specific to your cluster.
+.TP
+\fB-b\fP \fIbytes\fR
+Set the filesystem block size to \fIbytes\fR which must be a power of two. The
+minimum block size is 512 and the block size cannot exceed the machine's memory
+page size, which on most architectures is 4096 bytes.  The default block size
+is 4096 bytes.
+.TP
+\fB-c\fP \fImegabytes\fR
+Initial size of each journal's quota change file. The default is 1MB.
+.TP
+\fB-D\fP
+Enable debugging output.
+.TP
+\fB-h\fP
+Print out a help message describing the available options, then exit.
+.TP
+\fB-J\fP \fImegabytes\fR
+The size of each journal. The minimum size is 8 megabytes and the maximum is
+1024. If this is not specified, a value based on a sensible proportion of the
+file system will be chosen.
+.TP
+\fB-j\fP \fIjournals\fR
+The number of journals for mkfs.gfs2 to create.  At least one journal is
+required for each machine that will mount the filesystem concurrently.  If this
+option is not specified, only one journal will be created. This number may be
+used as an indicator of the number of nodes in the cluster in order to optimize
+the layout of the filesystem. As such, it is best to set this option with the
+maximum number of mounters in mind than to add more journals later.
+.TP
+\fB-K\fP
+Do not attempt to discard the block device contents. Issuing discards to the
+device allows some solid state devices and sparse or thin-provisioned storage
+devices to optimise free space. Other devices may emulate this behaviour by
+zeroing the device contents, which can be a slow process.
+.TP
+\fB-O\fP
+Override. This option prevents mkfs.gfs2 from asking for confirmation before
+writing the filesystem.
+.TP
+\fB-o\fP
+Specify extended options. Multiple options can be separated by commas. Valid
+extended options are:
+.RS 1.0i
+.TP
+.BI help
+Display an extended options help summary, then exit.
+.TP
+.BI sunit= bytes
+This is used to specify the stripe unit for a RAID device or striped logical
+volume.  This option ensures that resource groups will be stripe unit aligned
+and overrides the stripe unit value obtained by probing the device. This value
+must be a multiple of the file system block size and must be specified with the
+.I swidth
+option.
+.TP
+.BI swidth= bytes
+This is used to specify the stripe width for a RAID device or striped logical
+volume.  This option ensures that resource groups will be stripe aligned and
+overrides the stripe width value obtained by probing the device. This value
+must be a multiple of the
+.I sunit
+option and must also be specified with it.
+.TP
+.BI align= [0|1]
+Disable or enable the alignment of resource groups. The default behaviour is to
+align resource groups to the stripe width and stripe unit values obtained from
+probing the device or specified with the
+.I swidth
+and
+.I sunit
+extended options.
+.RE
+.TP
+\fB-p\fP \fIprotocol\fR
+Specify the locking protocol to use when no locking protocol is specified at
+mount time. Valid locking protocols are:
+.RS 1.0i
+.TP
+.BI lock_dlm
+This is the default. It enables DLM-based locking for use in shared storage
+configurations.
+.TP
+.BI lock_nolock
+This enables single-node locking
+.RE
+.TP
+\fB-q\fP
+Quiet mode. Do not print anything.
+.TP
+\fB-r\fP \fImegabytes\fR
+mkfs.gfs2 will try to make resource groups approximately this large.  The
+minimum resource group size is 32 MB and the maximum is 2048 MB.  A large
+resource group size may increase performance on very large file systems.  If
+not specified, mkfs.gfs2 will choose the resource group size based on the
+size and alignment characteristics of the target device.
+.TP
+\fB-t\fP \fIclustername:lockspace\fR
+The "lock table" pair used to uniquely identify this filesystem in a cluster.
+The cluster name segment (maximum 32 characters) must match the name given to
+your cluster in its configuration; only members of this cluster are permitted
+to use this file system.  The lockspace segment (maximum 30 characters) is a
+unique file system name used to distinguish this gfs2 file system.  Valid
+\fIclustername\fRs and \fIlockspace\fRs may only contain alphanumeric
+characters, hyphens (-) and underscores (_).
+.TP
+\fB-V\fP
+Print program version information, then exit.
+.TP
+\fIblock-count\fR
+Use \fIblock-count\fR as the size of the filesystem instead of using the whole
+device. \fIblock-count\fR is specified as a number of filesystem blocks.
+.SH EXAMPLE
+.nf
+.RS
+# mkfs.gfs2 -t mycluster:mygfs2 -p lock_dlm -j 2 /dev/vg0/lv_gfs2
+.PP
+This will create a gfs2 filesystem on the block device /dev/vg0/lv_gfs2.  It
+will belong to a cluster named "mycluster" and use the "mygfs2" lock space.  It
+will use DLM for locking and create journals for a two-node cluster.
+.PP
+# mkfs.gfs2 -t mycluster:mygfs2 -p lock_nolock -j 3 /dev/vg0/lv_gfs2
+.PP
+This will create a filesystem on the block device /dev/vg0/lv_gfs2.  It
+will belong to a cluster named "mycluster" and use the "mygfs2" lockspace, but
+it will have no cluster locking by default as lock_nolock is used.  It will
+have journals for a three-node cluster.
+.RE
+.fi
+.SH SEE ALSO
+.BR gfs2 (5),
+.BR gfs2_jadd (8),
+.BR gfs2_grow (8)

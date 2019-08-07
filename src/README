@@ -1,0 +1,83 @@
+- Dependency
+    - clang-3.8
+    - llvm-config 3.8
+    - gcc 5.4.0
+
+- Usage
+    - cd src
+    - cd afl (cwd: fs-fuzz/src/afl)
+        - make
+    - cd llvm_mode (cwd: fs-fuzz/src/afl/llvm_mode)
+        - make
+        - cd ../..
+    - cd syscall (cwd: fs-fuzz/src/syscall)
+        - make
+        - cd ..
+     - cd ff-gcc (cwd: fs-fuzz/src/ff-gcc)
+        - make
+        - cd ..
+    - checkout git@tc.gtisc.gatech.edu:lkl
+        - lkl is a required submodule
+    - Compile lkl
+        - cd lkl (cwd: fs-fuzz/src/lkl)
+        - ./compile -t btrfs -c
+        - there are three target applications generated
+            - ./tools/lkl/btrfs-fsfuzz          for blob fuzzing
+            - ./tools/lkl/btrfs-executor        for system call fuzzing
+            - ./tools/lkl/btrfs-combined        for combined fuzzing
+        - cd ..
+    - Compile image wrapper
+        - cd fs/btrfs (cwd: fs-fuzz/src/fs/btrfs)
+        - make
+        - two output generated
+            - btrfs_wrapper.so      AFL linked with this .so to compress and decompress an image
+            - btrfs_standalone      this is used to release image offline
+        - cd ../..
+
+    - Compile fuzzer
+        - cd combined (cwd: fs-fuzz/src/combined)
+        - make
+        - cd afl-image-syscall
+        - make
+        - cd ../..
+
+    - Seed image: samples/oracle/btrfs-00.image
+    - Initial image status file: istat/btrfs-00.istat
+
+    - Run fuzzer
+        - We need a directory to store seed programs for start
+            - name it as DIR
+        - Create seed programs
+            - ./combined/create_corpus istat/xfs-00.istat DIR
+        - Check seed program or later genereated programs 
+            - ./combined/program_show DIR/open_read0
+        - Prepare run
+            - sudo ./utils/prepare.sh
+        - Make dirs
+            - mkdir input output
+        - Start fuzzer (you can also refer to Makefile)
+            - BTRFS_IMG := $(CURDIR)/samples/oracle/btrfs-00.image (seed image)
+              BTRFS_COMBINED_TARGET := ${LKL}/tools/lkl/btrfs-combined (the lkl application receiving a image and a program to test)
+              BTRFS_WRAPPER := $(CURDIR)/fs/btrfs/btrfs_wrapper.so (wrapper to compress and decompress image)
+              AFL_IMAGE_SYSCALL=$(CURDIR)/combined/afl-image-syscall
+            - AFL_SKIP_BIN_CHECK=1 $(AFL_IMAGE_SYSCALL)/afl-fuzz -b btrfs_1 -s $(BTRFS_WRAPPER) -e $(BTRFS_IMG) -S slave1 -y DIR -i input -o output -u 11 -- $(BTRFS_COMBINED_TARGET) -t btrfs -p @@
+                - -b btrfs_1 is the shared buffer name used to share image between afl and target
+                - fuzzer will extract metadata and combine with these seed serialized programs under DIR to create a testcase under input (it is automatically done)
+        - How to check a generated testcase
+            - ./utils/afl-parse -i samples/oracle/btrfs-00.image -t btrfs -f /mnt/sdd/wen/combined/btrfs-00/slave1/queue/id:000105,src:000000,op:havoc,rep:128,+cov (<-- a generated testcase path) -o tmp
+                - it will generate tmp.img <-- the mutated image
+                - and tmp.c <-- the program performed on the mutated image
+
+- Source architecture
+    - Mainly check ./combined/afl-image-syscall/afl-fuzz.c
+        - it first runs havoc stage to mutate image (line 6222)
+            - it is byte fuzzing so we just use the original byte flipping algorithm AFL uses
+        - then line 6778 for system call mutation 
+        - then line 6820 for system call generation
+            - For these two stage, how we mutate and generate new system calls
+                - The main logic is in ./combined/SyscallMutator.hpp
+            - how we serialize a program and also maintain live image status
+                - Check paper draft and also ./combined/Program.hpp
+
+        
+

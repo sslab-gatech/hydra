@@ -1,0 +1,44 @@
+This document describes how to configure and build the open source XFS
+commands and utilites ("xfsdump") from source, and how to install and
+run them.
+
+0. If you have the binary rpm, simply install it and skip to step 2 (below).
+   The rpm command to do this is:
+	# rpm -Uvh xfsdump
+
+   The Debian command to do this is:
+	# dpkg -i xfsdump
+   or, if you have apt configured (don't need the binary package):
+	# apt-get install xfsdump
+
+1. Configure, build and install the package
+
+   The xfsdump package uses autoconf/configure and expects a GNU build
+   environment (your platform must at least have both autoconf and gmake). 
+   You will also need to have installed either the e2fsprogs-devel package
+   (on an RPM based system) or the uuid-dev package (on a Debian system)
+   as some of the commands make use of the UUID library provided by these.
+
+   To build the package and install it manually, use the following steps:
+
+	# make
+	# su root
+	# make install
+	[and optionally, for the development libraries and headers]
+	# make install-dev
+
+   Note that there are so many "install" variants out there that we
+   wrote our own script (see "install-sh" in the top level directory).
+
+   If you wish to turn off debugging asserts in the command build and
+   turn on the optimizer then set the shell environment variables:
+
+	OPTIMIZER=-O1
+	DEBUG=-DNDEBUG
+
+   before running make or Makepkgs.
+
+2. How to Contribute
+
+   See the README file in this directory for details about how to
+   contribute to the XFS project.

@@ -1,0 +1,113 @@
+#
+# Copyright (c) 2002-2006 Silicon Graphics, Inc.  All Rights Reserved.
+#
+# @configure_input@
+#
+
+ifndef _BUILDDEFS_INCLUDED_
+_BUILDDEFS_INCLUDED_ = 1
+
+DEBUG = @debug_build@
+OPTIMIZER = @opt_build@
+MALLOCLIB = @malloc_lib@
+LOADERFLAGS = @LDFLAGS@
+CFLAGS = @CFLAGS@
+
+LIBRMT = $(TOPDIR)/librmt/librmt.la
+LIBXFS = @libxfs@
+LIBATTR = @libattr@
+LIBPTHREAD = @libpthread@
+LIBUUID = @libuuid@
+LIBCURSES = @libcurses@
+LIBHANDLE = @libhdl@
+
+PKG_NAME	= @pkg_name@
+PKG_USER	= @pkg_user@
+PKG_GROUP	= @pkg_group@
+PKG_RELEASE	= @pkg_release@
+PKG_VERSION	= @pkg_version@
+PKG_PLATFORM	= @pkg_platform@
+PKG_DISTRIBUTION= @pkg_distribution@
+
+prefix		= @prefix@
+exec_prefix	= @exec_prefix@
+datarootdir	= @datarootdir@
+top_builddir	= @top_builddir@
+
+PKG_SBIN_DIR	= @sbindir@
+PKG_ROOT_SBIN_DIR = @root_sbindir@
+PKG_ROOT_LIB_DIR= @root_libdir@@libdirsuffix@
+PKG_INC_DIR	= @includedir@
+PKG_MAN_DIR	= @mandir@
+PKG_DOC_DIR	= @datadir@/doc/@pkg_name@
+PKG_LOCALE_DIR	= @datadir@/locale
+
+CC		= @cc@
+AWK		= @awk@
+SED		= @sed@
+TAR		= @tar@
+ZIP		= @zip@
+MAKE		= @make@
+ECHO		= @echo@
+SORT		= @sort@
+LN_S		= @LN_S@
+SHELL		= @SHELL@
+LIBTOOL		= @LIBTOOL@
+MAKEDEPEND	= @makedepend@
+
+MSGFMT		= @msgfmt@
+MSGMERGE	= @msgmerge@
+XGETTEXT	= @xgettext@
+LOCALIZED_FILES	= @LOCALIZED_FILES@
+
+RPM		= @rpm@
+RPMBUILD	= @rpmbuild@
+RPM_VERSION	= @rpm_version@
+
+ENABLE_CURSES	= @enable_curses@
+ENABLE_SHARED	= @enable_shared@
+ENABLE_GETTEXT	= @enable_gettext@
+
+HAVE_ZIPPED_MANPAGES = @have_zipped_manpages@
+
+GCCFLAGS = -funsigned-char -fno-strict-aliasing -Wall 
+#	   -Wbitwise -Wno-transparent-union -Wno-old-initializer -Wno-decl
+
+ifeq ($(PKG_PLATFORM),linux)
+PCFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 $(GCCFLAGS)
+DEPENDFLAGS = -D__linux__
+endif
+ifeq ($(PKG_PLATFORM),darwin)
+PCFLAGS = -traditional-cpp $(GCCFLAGS)
+DEPENDFLAGS = -D__APPLE__
+endif
+ifeq ($(PKG_PLATFORM),irix)
+PLDLIBS = -ldisk -lgen
+DEPENDFLAGS = -D__sgi__
+endif
+ifeq ($(PKG_PLATFORM),freebsd)
+PLDLIBS = -L/usr/local/lib -lintl
+PCFLAGS = -I/usr/local/include $(GCCFLAGS)
+DEPENDFLAGS = -D__FreeBSD__
+endif
+
+GCFLAGS = $(OPTIMIZER) $(DEBUG) \
+	  -DVERSION=\"$(PKG_VERSION)\" -DLOCALEDIR=\"$(PKG_LOCALE_DIR)\"  \
+	  -DPACKAGE=\"$(PKG_NAME)\" -I$(TOPDIR)/include
+
+ifeq ($(ENABLE_GETTEXT),yes)
+GCFLAGS += -DENABLE_GETTEXT
+endif
+
+# First, Global, Platform, Local CFLAGS
+CFLAGS += $(FCFLAGS) $(GCFLAGS) $(PCFLAGS) $(LCFLAGS)
+
+include $(TOPDIR)/include/buildmacros
+
+endif
+
+#
+# For targets that should always be rebuilt,
+# define a target that is never up-to-date.
+# Targets needing this should depend on $(_FORCE)
+_FORCE = __force_build
