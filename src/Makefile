@@ -4,15 +4,10 @@ include $(CUR_DIR)/Makefile.inc
 
 LLVM_ARGS := -DLLVM_TARGETS_TO_BUILD=X86 -DCMAKE_BUILD_TYPE=Release
 
-all: readme consistency-readme
+all: readme
 
 readme:
 	@cat build-note
-
-consistency-readme:
-	@echo ""
-	@echo "== Running the consistency checker"
-	@cat consistency-run-note
 
 build-llvm:
 	if [ ! -d "$(LLVM_BLD)" ]; then \
