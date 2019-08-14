@@ -1,7 +1,0 @@
-*.img
-gfs2_standalone
-gfs2_general_standalone
-gfs2-fsfuzz
-gfs2-tfuzz
-*.o
-*.so

@@ -65,38 +65,21 @@ build-lkl-f2fs: get-lkl
 build-lkl-xfs: get-lkl
 	(cd $(LKL_DIR) && ./compile -t xfs -c && cd -)
 
-build-lkl-vfat: get-lkl
-	(cd $(LKL_DIR) && ./compile -t fat -c && cd -)
-
-build-lkl-sdcardfs: get-lkl
-	(cd $(LKL_DIR) && ./compile -t sdcardfs -c && cd -)
-
 get-lkl: build-img-sys
 	if [ ! -d "$(LKL_DIR)" ]; then \
-		git clone git@tc.gtisc.gatech.edu:lkl-new $(LKL_DIR); \
+		git clone https://github.com/sslab-gatech/lkl-hydra.git $(LKL_DIR); \
 	fi
 
 build-btrfs-imgwrp: build-lkl-btrfs
 	make -C $(BTRFS_IMGWRP_DIR)
 
-build-ext4-imgwrp: build-ext4-e2fsprogs
+build-ext4-imgwrp: build-lkl-ext4
 	make -C $(EXT4_IMGWRP_DIR)
-
-build-ext4-e2fsprogs: build-lkl-ext4
-	(cd $(EXT4_LIB_DIR); \
-	 CFLAGS="-fPIC" CPPFLAGS="-fPIC" LDFLAGS="-lblkid -luuid" ./configure --enable-libblkid --enable-libuuid)
-	make -C $(EXT4_LIB_DIR)
 
 build-f2fs-imgwrp: build-lkl-f2fs
 	make -C $(F2FS_IMGWRP_DIR)
 
 build-xfs-imgwrp: build-lkl-xfs
 	make -C $(XFS_IMGWRP_DIR)
-
-build-vfat-imgwrp: build-lkl-vfat
-	make -C $(FAT_IMGWRP_DIR)
-
-build-sdcardfs-imgwrp: build-lkl-sdcardfs
-	make -C $(SDCARDFS_IMGWRP_DIR)
 
 distclean: clean-afl-llvm-mode clean-afl clean-syscall clean-ffgcc

@@ -1,0 +1,146 @@
+#!/bin/sh
+
+set -e
+
+BASE=/tmp/mosbench
+
+usage() {
+    cat >&2 <<EOF
+Usage: $0 [-u] fstype [uid gid]
+
+Mount or unmount file systems for MOSBENCH of the given file system
+type.  Must be run as root.  If -u is given, unmount mounts created
+for the given file system type.  If mounting, access permissions will
+be granted to uid/gid, which must be the user the benchmarks will run
+as.  If not given, they default to \$SUDO_UID and \$SUDO_GID, so this
+script can be run via sudo from the benchmark user.  Supported
+fstype's are
+
+tmpfs-separate   Separate tmpfs per CPU.
+tmpfs            One unified tmpfs with per-CPU directories.
+hugetlb          hugetlbfs for Metis with super-pages.
+
+All file system mounts will be of the form $BASE/fstype[/n].
+EOF
+    exit 2
+}
+
+XUID=`id -u`
+
+if [ $XUID != 0 ]; then
+    echo "Must be run as root" >&2
+    exit 2
+fi
+
+# Unmount?
+UNMOUNT=
+if [ "$1" = -u ]; then
+    UNMOUNT=1
+    shift
+fi
+
+# UID/GID argument
+if [ $UNMOUNT ]; then
+    if [ $# != 1 ]; then
+        echo "uid and gid arguments do not apply when unmounting" >&2
+        exit 2
+    fi
+elif [ $# = 1 ]; then
+    if [ "x$SUDO_UID" = x -o "x$SUDO_GID" = x ]; then
+        echo "uid and gid arguments are only optional if run from sudo" >&2
+        exit 2
+    fi
+    FSUID="$SUDO_UID"
+    FSGID="$SUDO_GID"
+elif [ $# = 3 ]; then
+    FSUID="$2"
+    FSGID="$3"
+else
+    usage
+fi
+if [ ! $UNMOUNT ]; then
+    if [ "x$FSUID" = x -o "x$FSGID" = x ]; then
+        usage
+    fi
+    MOUNT="mount -o mode=0755,uid=$FSUID,gid=$FSGID"
+fi
+
+# Get CPU set for shard directories
+CPUS=$(awk '/processor/&&$3~/[0-9]+/{print $3}' /proc/cpuinfo)
+if [ "x$CPUS" = x ]; then
+    echo "Failed to determine CPU set" >&2
+    exit 1
+fi
+
+dotmpfs() {
+    if [ $UNMOUNT ]; then
+        umount $1 || true
+    else
+        mkdir -p $1
+        $MOUNT -t tmpfs none $1
+    fi
+}
+
+# Create mounts
+case $1 in
+    tmpfs-separate)
+        # Mount/unmount per-CPU
+        for cpu in $CPUS; do
+            dotmpfs $BASE/$1/$cpu
+        done
+        # Mount/unmount Exim spool directories
+        # intersperse ' ' $ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
+        spools="0 1 2 3 4 5 6 7 8 9 a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z"
+        if [ ! $UNMOUNT ]; then dotmpfs $BASE/$1/spool; dotmpfs $BASE/$1/spool1; fi
+        for spool in $spools; do
+            dotmpfs $BASE/$1/spool/input/$spool
+            dotmpfs $BASE/$1/spool1/input/$spool
+            # This doesn't make much of a difference
+#            dotmpfs $BASE/$1/spool/msglog/$spool
+        done
+        if [ $UNMOUNT ]; then dotmpfs $BASE/$1/spool; dotmpfs $BASE/$1/spool1; fi
+        ;;
+    tmpfs)
+        dotmpfs $BASE/$1
+        if [ ! $UNMOUNT ]; then
+            # Make per-CPU directories
+            for cpu in $CPUS; do
+                D=$BASE/$1/$cpu
+                mkdir -m 0755 $D
+                chown $FSUID:$FSGID $D
+            done
+            # No need to make Exim spools.  Exim will do that.
+        fi
+        ;;
+    hugetlb)
+        D=$BASE/$1
+        if ! grep -q hugetlbfs /proc/filesystems; then
+            echo "This kernel doesn't support hugetlbfs.  See CONFIG_HUGETLBFS" >&2
+            exit 1
+        fi
+        pagesize=$(awk '/^Hugepagesize:/&&$3=="kB"{print $2}' < /proc/meminfo)
+        if [ "x$pagesize" = x ]; then
+            echo "Failed to parse Hugepagesize from /proc/meminfo" >&2
+            exit 1
+        fi
+        # Allocate 20 gigs of huge pages
+        pages=$(expr 20 \* 1024 \* 1024 / $pagesize)
+        havepages=$(cat /proc/sys/vm/nr_hugepages)
+
+        if [ $UNMOUNT ]; then
+            umount $D
+            newpages=$(expr $havepages - $pages || true)
+            echo "Reducing huge page allocation from $havepages to $newpages pages"
+            echo $newpages > /proc/sys/vm/nr_hugepages
+        else
+            mkdir -p $D
+            $MOUNT -t hugetlbfs none $D
+            newpages=$(expr $havepages + $pages)
+            echo "Increasing huge page allocation from $havepages to $newpages pages"
+            echo $newpages > /proc/sys/vm/nr_hugepages
+        fi
+        ;;
+    *)
+        echo "Unknown file system type $1" >&2
+        exit 2
+esac

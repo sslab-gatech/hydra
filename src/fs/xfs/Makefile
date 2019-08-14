@@ -1,8 +1,13 @@
 CXXFLAGS=-std=c++11
 CFLAGS=-std=c99
 CC=gcc
+XFSPROGS=xfsprogs-dev
 
-all: standalone wrapper general_standalone general_wrapper
+all: lib standalone wrapper general_standalone general_wrapper
+
+lib:
+	cd $(XFSPROGS);\
+		make
 
 standalone: 
 	$(CXX) $(CXXFLAGS) -I../ -c xfs_fuzzer.cc -g

@@ -2,7 +2,7 @@
 *.a
 *.so
 lkl-kasan
-llvm-build/
+llvm-build
 
 /fuzzspace-syscall
 /fuzzspace-image-syscall

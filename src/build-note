@@ -3,7 +3,7 @@ wrapper to put everything into one bin file to allow use to fuzz without any has
 Currently, it is very cumbersome, but I have simplified to building one file system build.
 
 All you have to specify is the following to build:
-- BTRFS: make build-lkl-btrfs
-- EXT4: make build-lkl-ext4
-- F2FS: make build-lkl-f2fs
-- XFS: make build-lkl-xfs
+- BTRFS: make build-btrfs-imgwrp
+- EXT4: make build-ext4-imgwrp
+- F2FS: make build-f2fs-imgwrp
+- XFS: make build-xfs-imgwrp

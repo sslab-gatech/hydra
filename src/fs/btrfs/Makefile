@@ -32,4 +32,3 @@ clean:
 	rm -f *.o
 	rm -f *_standalone
 	rm -f btrfs_wrapper.so
-	rm -f meta.img out.img 

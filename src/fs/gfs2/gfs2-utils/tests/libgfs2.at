@@ -1,9 +1,0 @@
-AT_BANNER([libgfs2 unit tests])
-
-GFS_UNIT_TEST([meta.c],[libgfs2])
-AT_CHECK([check_meta], 0, [ignore], [ignore])
-AT_CLEANUP
-
-GFS_UNIT_TEST([rgrp.c],[libgfs2])
-AT_CHECK([check_rgrp], 0, [ignore], [ignore])
-AT_CLEANUP
