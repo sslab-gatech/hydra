@@ -1,6 +1,7 @@
 # Hydra - SOSP19 Artifact
 
-1. Contents
+## Contents
+
 * General code base
   - src/combined: Hydra input mutator
   - src/lkl/tools/lkl/{FS}-combined-consistency: Hydra LibOS-based Executor
@@ -10,19 +11,19 @@
   - src/emulator: Hydra's in-house crash consistency checker, SymC3
 
 
-2. Setup
+## Setup
 
-All setup should be done under `src`
+1. All setup should be done under `src`
 ```
 $ cd src
 ```
 
-Install dependencies
+2. Install dependencies
 ```
 ./dep.sh
 ```
 
-Run make for each file system
+3. Run make for each file system
 ```
 $ make build-btrfs-imgwrp
 $ make build-ext4-imgwrp
@@ -30,7 +31,7 @@ $ make build-f2fs-imgwrp
 $ make build-xfs-imgwrp
 ```
 
-Set up environments
+4. Set up environments
 ```
 $ sudo ./prepare_fuzzing.sh
 $ ./prepare_env.sh
@@ -42,13 +43,13 @@ It is highly recommended that you use tmpfs.
 $ mkdir /tmp/mosbench/tmpfs-separate/4/log  // use free core (4 in this case)
 ```
 
-Run fuzzing!
+5. Run fuzzing!
 ```
 $ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer -b btrfs1 -s fs/btrfs/btrfs_wrapper.so -e samples/oracle/btrfs-10.image -y seed -i in -o out -u 10 -- lkl/tools/lkl/btrfs-combined-consistency -t btrfs -i samples/oracle/btrfs-10.image -e emulator/emulator.py -l /tmp/mostbench/tmpfs-separate/4/log -d "/tmp/mosbench/tmpfs-separate/4/" -r -p @@
 ```
 
-AFL args:
 ```
+// AFL arguments
 -S fuzzer00                      : Run AFL in slave mode
 -b btrfs1                        : Name of fuzzer instance and shared memory buffer
 -s fs/btrfs/btrfs_wrapper.so     : fs-specific parser (try ext4/f2fs/xfs)
@@ -61,8 +62,8 @@ AFL args:
 -u 10                            : CPU id to run this fuzzer instance
 ```
 
-LKL emulator args:
 ```
+// LKL executor arguments
 -t btrfs
 -i samples/oracle/btrfs-10.image      : Base image file. Should be the same as the -e arg for AFL
 -e emulator/emulator.py               : SymC3 emulator path
