@@ -45,6 +45,9 @@ $ mkdir /tmp/mosbench/tmpfs-separate/4/log  // use free core (4 in this case)
 
 5. Run fuzzing!
 ```
+// Make sure the /dev/shm/ does not contain shm file btrfs1
+// e.g., execute $ rm /dev/shm/btrfs1 before running the command below!
+
 $ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer -b btrfs1 -s fs/btrfs/btrfs_wrapper.so -e samples/oracle/btrfs-10.image -y seed -i in -o out -u 10 -- lkl/tools/lkl/btrfs-combined-consistency -t btrfs -i samples/oracle/btrfs-10.image -e emulator/emulator.py -l /tmp/mostbench/tmpfs-separate/4/log -d "/tmp/mosbench/tmpfs-separate/4/" -r -p @@
 ```
 
