@@ -1,0 +1,417 @@
+commit a80b672b050b2b33a4591f0ec7e70df5e4cb4d5d
+Author: Meng Xu <meng.xu@gatech.edu>
+Date:   Tue Apr 16 11:08:21 2019 -0400
+
+    markings for internal checkers
+
+diff --git a/btrfs-config b/btrfs-config
+index 554b2fb..7a64f97 100644
+--- a/btrfs-config
++++ b/btrfs-config
+@@ -35,6 +35,11 @@ CONFIG_VIRTIO_MMIO_CMDLINE_DEVICES=y
+ # CONFIG_XFS_RT=y
+ CONFIG_BTRFS_FS=y
+ CONFIG_BTRFS_FS_POSIX_ACL=y
++CONFIG_BTRFS_DEBUG=y
++CONFIG_BTRFS_FS_CHECK_INTEGRITY=y
++# CONFIG_BTRFS_FS_RUN_SANITY_TESTS=y
++CONFIG_BTRFS_ASSERT=y
++CONFIG_BTRFS_FS_REF_VERIFY=y
+ # CONFIG_FILE_LOCKING is not set
+ # CONFIG_DNOTIFY is not set
+ # CONFIG_INOTIFY_USER is not set
+diff --git a/ext4-config b/ext4-config
+index cfd80f1e..f0923c9 100644
+--- a/ext4-config
++++ b/ext4-config
+@@ -32,6 +32,8 @@ CONFIG_EXT4_FS_POSIX_ACL=y
+ CONFIG_EXT4_FS_SECURITY=y
+ CONFIG_EXT4_ENCRYPTION=y
+ CONFIG_EXT4_FS_ENCRYPTION=y
++CONFIG_EXT4_DEBUG=y
++CONFIG_JBD2_DEBUG=y
+ CONFIG_FS_ENCRYPTION=y
+ # CONFIG_XFS_FS=y
+ # CONFIG_XFS_POSIX_ACL=y
+diff --git a/f2fs-config b/f2fs-config
+index 66aba89..8ab699a 100644
+--- a/f2fs-config
++++ b/f2fs-config
+@@ -40,8 +40,8 @@ CONFIG_F2FS_STAT_FS=y
+ CONFIG_F2FS_FS_XATTR=y
+ CONFIG_F2FS_FS_POSIX_ACL=y
+ CONFIG_F2FS_FS_SECURITY=y
+-# CONFIG_F2FS_CHECK_FS is not set
+ CONFIG_F2FS_FS_ENCRYPTION=y
++CONFIG_F2FS_CHECK_FS=y
+ # CONFIG_FILE_LOCKING is not set
+ # CONFIG_DNOTIFY is not set
+ # CONFIG_INOTIFY_USER is not set
+diff --git a/fs/btrfs/ctree.c b/fs/btrfs/ctree.c
+index 5a6c39b..a7dc512 100644
+--- a/fs/btrfs/ctree.c
++++ b/fs/btrfs/ctree.c
+@@ -2538,6 +2538,8 @@ static void key_search_validate(struct extent_buffer *b,
+ 
+ 	btrfs_cpu_key_to_disk(&disk_key, key);
+ 
++	printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++
+ 	if (level == 0)
+ 		ASSERT(!memcmp_extent_buffer(b, &disk_key,
+ 		    offsetof(struct btrfs_leaf, items[0].key),
+@@ -2546,6 +2548,8 @@ static void key_search_validate(struct extent_buffer *b,
+ 		ASSERT(!memcmp_extent_buffer(b, &disk_key,
+ 		    offsetof(struct btrfs_node, ptrs[0].key),
+ 		    sizeof(disk_key)));
++
++	BUG();
+ #endif
+ }
+ 
+diff --git a/fs/btrfs/disk-io.c b/fs/btrfs/disk-io.c
+index 6a2a2a9..de1ea28 100644
+--- a/fs/btrfs/disk-io.c
++++ b/fs/btrfs/disk-io.c
+@@ -428,6 +428,9 @@ static int verify_level_key(struct btrfs_fs_info *fs_info,
+ 		btrfs_err(fs_info,
+ "tree level mismatch detected, bytenr=%llu level expected=%u has=%u",
+ 			  eb->start, level, found_level);
++
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		BUG();
+ #endif
+ 		return -EIO;
+ 	}
+@@ -458,6 +461,9 @@ static int verify_level_key(struct btrfs_fs_info *fs_info,
+ 			  first_key->type, first_key->offset,
+ 			  found_key.objectid, found_key.type,
+ 			  found_key.offset);
++
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		BUG();
+ 	}
+ #endif
+ 	return ret;
+@@ -3136,10 +3142,14 @@ int open_ctree(struct super_block *sb,
+ 					CHECK_INTEGRITY_INCLUDING_EXTENT_DATA) ?
+ 				    1 : 0,
+ 				    fs_info->check_integrity_print_mask);
+-		if (ret)
++		if (ret) {
+ 			btrfs_warn(fs_info,
+ 				"failed to initialize integrity check module: %d",
+ 				ret);
++
++			printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++			BUG();
++		}
+ 	}
+ #endif
+ 	ret = btrfs_read_qgroup_config(fs_info);
+@@ -4106,7 +4116,10 @@ void btrfs_mark_buffer_dirty(struct extent_buffer *buf)
+ 	if (btrfs_header_level(buf) == 0 &&
+ 	    btrfs_check_leaf_relaxed(fs_info, buf)) {
+ 		btrfs_print_leaf(buf);
++
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
+ 		ASSERT(0);
++		BUG();
+ 	}
+ #endif
+ }
+diff --git a/fs/btrfs/extent_io.c b/fs/btrfs/extent_io.c
+index 52abe40..c1b6d90 100644
+--- a/fs/btrfs/extent_io.c
++++ b/fs/btrfs/extent_io.c
+@@ -5148,8 +5148,12 @@ bool set_extent_buffer_dirty(struct extent_buffer *eb)
+ 			set_page_dirty(eb->pages[i]);
+ 
+ #ifdef CONFIG_BTRFS_DEBUG
+-	for (i = 0; i < num_pages; i++)
++	for (i = 0; i < num_pages; i++) {
++		if (!PageDirty(eb->pages[i])) {
++			printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		}
+ 		ASSERT(PageDirty(eb->pages[i]));
++	}
+ #endif
+ 
+ 	return was_dirty;
+diff --git a/fs/btrfs/qgroup.c b/fs/btrfs/qgroup.c
+index 4e473a9..0fd33e1 100644
+--- a/fs/btrfs/qgroup.c
++++ b/fs/btrfs/qgroup.c
+@@ -87,6 +87,9 @@ static void qgroup_rsv_release(struct btrfs_fs_info *fs_info,
+ 		"qgroup %llu %s reserved space underflow, have %llu to free %llu",
+ 		qgroup->qgroupid, qgroup_rsv_type_str(type),
+ 		qgroup->rsv.values[type], num_bytes);
++
++	printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++	BUG();
+ #endif
+ 	qgroup->rsv.values[type] = 0;
+ }
+diff --git a/fs/btrfs/ref-verify.c b/fs/btrfs/ref-verify.c
+index c3557c1..550192f 100644
+--- a/fs/btrfs/ref-verify.c
++++ b/fs/btrfs/ref-verify.c
+@@ -382,6 +382,10 @@ static int add_shared_data_ref(struct btrfs_fs_info *fs_info,
+ 	if (insert_ref_entry(&be->refs, ref)) {
+ 		spin_unlock(&fs_info->ref_verify_lock);
+ 		btrfs_err(fs_info, "existing shared ref when reading from disk?");
++
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		BUG();
++
+ 		kfree(ref);
+ 		return -EINVAL;
+ 	}
+@@ -420,6 +424,10 @@ static int add_extent_data_ref(struct btrfs_fs_info *fs_info,
+ 	if (insert_ref_entry(&be->refs, ref)) {
+ 		spin_unlock(&fs_info->ref_verify_lock);
+ 		btrfs_err(fs_info, "existing ref when reading from disk?");
++
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		BUG();
++
+ 		kfree(ref);
+ 		return -EINVAL;
+ 	}
+@@ -428,6 +436,10 @@ static int add_extent_data_ref(struct btrfs_fs_info *fs_info,
+ 	if (!re) {
+ 		spin_unlock(&fs_info->ref_verify_lock);
+ 		btrfs_err(fs_info, "missing root in new block entry?");
++
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		BUG();
++
+ 		return -EINVAL;
+ 	}
+ 	re->num_refs += num_refs;
+@@ -493,6 +505,10 @@ static int process_extent_item(struct btrfs_fs_info *fs_info,
+ 			break;
+ 		default:
+ 			btrfs_err(fs_info, "invalid key type in iref");
++
++			printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++			BUG();
++
+ 			ret = -EINVAL;
+ 			break;
+ 		}
+@@ -631,6 +647,9 @@ static void dump_ref_action(struct btrfs_fs_info *fs_info,
+ 		  ra->action, ra->root, ra->ref.root_objectid, ra->ref.parent,
+ 		  ra->ref.owner, ra->ref.offset, ra->ref.num_refs);
+ 	__print_stack_trace(fs_info, ra);
++
++	printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++	BUG();
+ }
+ 
+ /*
+@@ -953,6 +972,10 @@ void btrfs_free_ref_tree_range(struct btrfs_fs_info *fs_info, u64 start,
+ 				"block entry overlaps a block group [%llu,%llu]!",
+ 				start, len);
+ 			dump_block_entry(fs_info, be);
++
++			printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++			BUG();
++
+ 			continue;
+ 		}
+ 		if (be->bytenr < start)
+@@ -964,6 +987,9 @@ void btrfs_free_ref_tree_range(struct btrfs_fs_info *fs_info, u64 start,
+ 				"block entry overlaps a block group [%llu,%llu]!",
+ 				start, len);
+ 			dump_block_entry(fs_info, be);
++
++			printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++			BUG();
+ 		}
+ 		rb_erase(&be->node, &fs_info->block_tree);
+ 		free_block_entry(be);
+diff --git a/fs/ext4/extents.c b/fs/ext4/extents.c
+index 240b6de..4850870 100644
+--- a/fs/ext4/extents.c
++++ b/fs/ext4/extents.c
+@@ -3793,11 +3793,14 @@ static int ext4_convert_unwritten_extents_endio(handle_t *handle,
+ 	 * illegal.
+ 	 */
+ 	if (ee_block != map->m_lblk || ee_len > map->m_len) {
+-#ifdef EXT4_DEBUG
+-		ext4_warning("Inode (%ld) finished: extent logical block %llu,"
++#ifdef CONFIG_EXT4_DEBUG
++		printk(KERN_ERR "Inode (%ld) finished: extent logical block %llu,"
+ 			     " len %u; IO logical block %llu, len %u",
+ 			     inode->i_ino, (unsigned long long)ee_block, ee_len,
+ 			     (unsigned long long)map->m_lblk, map->m_len);
++
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		BUG();
+ #endif
+ 		err = ext4_split_convert_extents(handle, inode, map, ppath,
+ 						 EXT4_GET_BLOCKS_CONVERT);
+diff --git a/fs/ext4/mballoc.c b/fs/ext4/mballoc.c
+index e224808..a4b9654 100644
+--- a/fs/ext4/mballoc.c
++++ b/fs/ext4/mballoc.c
+@@ -19,7 +19,7 @@
+ #include <trace/events/ext4.h>
+ 
+ #ifdef CONFIG_EXT4_DEBUG
+-ushort ext4_mballoc_debug __read_mostly;
++ushort ext4_mballoc_debug __read_mostly = 1;
+ 
+ module_param_named(mballoc_debug, ext4_mballoc_debug, ushort, 0644);
+ MODULE_PARM_DESC(mballoc_debug, "Debugging level for ext4's mballoc");
+@@ -4145,6 +4145,9 @@ static void ext4_mb_show_ac(struct ext4_allocation_context *ac)
+ 		       i, grp->bb_free, grp->bb_fragments);
+ 	}
+ 	printk(KERN_ERR "\n");
++
++	printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++	BUG();
+ }
+ #else
+ static inline void ext4_mb_show_ac(struct ext4_allocation_context *ac)
+diff --git a/fs/f2fs/extent_cache.c b/fs/f2fs/extent_cache.c
+index 1cb0fcc..47ff06d 100644
+--- a/fs/f2fs/extent_cache.c
++++ b/fs/f2fs/extent_cache.c
+@@ -188,6 +188,10 @@ bool f2fs_check_rb_tree_consistence(struct f2fs_sb_info *sbi,
+ 				"cur(%u, %u) next(%u, %u)",
+ 				cur_re->ofs, cur_re->len,
+ 				next_re->ofs, next_re->len);
++
++			printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++			BUG();
++
+ 			return false;
+ 		}
+ 
+diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+index 12fabd6..d972d2f 100644
+--- a/fs/f2fs/f2fs.h
++++ b/fs/f2fs/f2fs.h
+@@ -28,7 +28,14 @@
+ #include <linux/fscrypt.h>
+ 
+ #ifdef CONFIG_F2FS_CHECK_FS
+-#define f2fs_bug_on(sbi, condition)	BUG_ON(condition)
++#define f2fs_bug_on(sbi, condition)	\
++	do { \
++		if (unlikely(condition)) { \
++			printk(KERN_ERR "-- INTERNAL CHECKER --\n"); \
++			BUG(); \
++		} \
++	} while (0)
++
+ #else
+ #define f2fs_bug_on(sbi, condition)					\
+ 	do {								\
+diff --git a/fs/f2fs/inode.c b/fs/f2fs/inode.c
+index bec5296..85e721b 100644
+--- a/fs/f2fs/inode.c
++++ b/fs/f2fs/inode.c
+@@ -174,10 +174,11 @@ bool f2fs_inode_chksum_verify(struct f2fs_sb_info *sbi, struct page *page)
+ 	provided = le32_to_cpu(ri->i_inode_checksum);
+ 	calculated = f2fs_inode_chksum(sbi, page);
+ 
+-	if (provided != calculated)
++	if (provided != calculated) {
+ 		f2fs_msg(sbi->sb, KERN_WARNING,
+ 			"checksum invalid, ino = %x, %x vs. %x",
+ 			ino_of_node(page), provided, calculated);
++	}
+ 
+ 	return provided == calculated;
+ }
+diff --git a/fs/f2fs/segment.h b/fs/f2fs/segment.h
+index a77f76f..65e3e84 100644
+--- a/fs/f2fs/segment.h
++++ b/fs/f2fs/segment.h
+@@ -486,8 +486,10 @@ static inline void get_sit_bitmap(struct f2fs_sb_info *sbi,
+ 
+ #ifdef CONFIG_F2FS_CHECK_FS
+ 	if (memcmp(sit_i->sit_bitmap, sit_i->sit_bitmap_mir,
+-						sit_i->bitmap_size))
++						sit_i->bitmap_size)) {
++
+ 		f2fs_bug_on(sbi, 1);
++	}
+ #endif
+ 	memcpy(dst_addr, sit_i->sit_bitmap, sit_i->bitmap_size);
+ }
+@@ -696,6 +698,10 @@ static inline int check_block_count(struct f2fs_sb_info *sbi,
+ 		f2fs_msg(sbi->sb, KERN_ERR,
+ 				"Mismatch valid blocks %d vs. %d",
+ 					GET_SIT_VBLOCKS(raw_sit), valid_blocks);
++
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		BUG();
++
+ 		set_sbi_flag(sbi, SBI_NEED_FSCK);
+ 		return -EINVAL;
+ 	}
+@@ -723,8 +729,10 @@ static inline pgoff_t current_sit_addr(struct f2fs_sb_info *sbi,
+ 
+ #ifdef CONFIG_F2FS_CHECK_FS
+ 	if (f2fs_test_bit(offset, sit_i->sit_bitmap) !=
+-			f2fs_test_bit(offset, sit_i->sit_bitmap_mir))
++			f2fs_test_bit(offset, sit_i->sit_bitmap_mir)) {
++
+ 		f2fs_bug_on(sbi, 1);
++	}
+ #endif
+ 
+ 	/* calculate sit block address */
+diff --git a/fs/jbd2/journal.c b/fs/jbd2/journal.c
+index 8ef6b6d..7709fab 100644
+--- a/fs/jbd2/journal.c
++++ b/fs/jbd2/journal.c
+@@ -49,7 +49,7 @@
+ #include <asm/page.h>
+ 
+ #ifdef CONFIG_JBD2_DEBUG
+-ushort jbd2_journal_enable_debug __read_mostly;
++ushort jbd2_journal_enable_debug __read_mostly = 1;
+ EXPORT_SYMBOL(jbd2_journal_enable_debug);
+ 
+ module_param_named(jbd2_debug, jbd2_journal_enable_debug, ushort, 0644);
+@@ -716,6 +716,9 @@ int jbd2_log_wait_commit(journal_t *journal, tid_t tid)
+ 		printk(KERN_ERR
+ 		       "%s: error: j_commit_request=%d, tid=%d\n",
+ 		       __func__, journal->j_commit_request, tid);
++
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		BUG();
+ 	}
+ #endif
+ 	while (tid_gt(tid, journal->j_commit_sequence)) {
+@@ -2714,8 +2717,11 @@ static void __exit journal_exit(void)
+ {
+ #ifdef CONFIG_JBD2_DEBUG
+ 	int n = atomic_read(&nr_journal_heads);
+-	if (n)
++	if (n) {
+ 		printk(KERN_ERR "JBD2: leaked %d journal_heads!\n", n);
++		printk(KERN_ERR "-- INTERNAL CHECKER --\n");
++		BUG();
++	}
+ #endif
+ 	jbd2_remove_jbd_stats_proc_entry();
+ 	jbd2_journal_destroy_caches();
+diff --git a/tools/lkl/combined.cpp b/tools/lkl/combined.cpp
+index fcd9687..582826e 100644
+--- a/tools/lkl/combined.cpp
++++ b/tools/lkl/combined.cpp
+@@ -241,7 +241,7 @@ int main(int argc, char **argv)
+ 
+     const char *mount_options = NULL;
+     if (!strcmp(cla.fsimg_type, "btrfs"))
+-        mount_options = "thread_pool=1";
++        mount_options = "thread_pool=1,fragment=all,check_int_data,ref_verify";
+     else if (!strcmp(cla.fsimg_type, "gfs2"))
+         mount_options = "acl";
+     else if (!strcmp(cla.fsimg_type, "reiserfs"))
