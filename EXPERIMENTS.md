@@ -57,7 +57,3 @@ $ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer-lb -b btr
   which is a use case of Hydra
   that specializes in finding memory bugs.
 
-## Code Coverage (§5.3)
-
-## Hydra Framework Services
-
