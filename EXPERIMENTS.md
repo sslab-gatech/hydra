@@ -27,6 +27,27 @@ system("echo b > /proc/sysrq-trigger");
 
 ### 2. Logic bugs
 
+- Checkout **logicbug** branch.
+- Enable kernel checkers in LKL by running the provided script:
+```
+$ cd src
+$ ./setup_logicbug.sh
+```
+- Re-compile Executors:
+```
+# Assume we're already in src/
+$ cd lkl
+$ make mrproper
+$ ./compile -t btrfs # You can replace btrfs with ext4 / f2fs / xfs
+```
+- Run fuzzing.
+```
+// Make sure you are not reusing the input and output directories from another experiments.
+// If so, create new directories and use them instead!
+$ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer-lb -b btrfs-lb -s fs/btrfs/btrfs_wrapper.so -e samples/oracle/btrfs-00.image -y seed-lb -i in-lb -o out-lb -u 11 -- lkl/tools/lkl/btrfs-combined -t btrfs -p @@
+```
+- The bugs will be stored under `out-lb/fuzzer-lb/crashes`.
+
 ### 3. Specification violation
 
 ### 4. Memory-safety bugs
