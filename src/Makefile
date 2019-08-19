@@ -12,6 +12,8 @@ readme:
 build-llvm:
 	if [ ! -d "$(LLVM_BLD)" ]; then \
 		mkdir -p $(LLVM_BLD); \
+	fi
+	if [ ! -d "$(LLVM_BLD)/bin" ]; then \
 		cd $(LLVM_BLD) && cmake $(LLVM_ARGS) $(LLVM_DIR); cd ..; \
 		make -C $(LLVM_BLD) -j${NJOB}; \
 	fi
