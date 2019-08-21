@@ -48,7 +48,16 @@ $ mkdir /tmp/mosbench/tmpfs-separate/4/log  // use free core (4 in this case)
 // Make sure the /dev/shm/ does not contain shm file btrfs1
 // e.g., execute $ rm /dev/shm/btrfs1 before running the command below!
 
-$ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer -b btrfs1 -s fs/btrfs/btrfs_wrapper.so -e samples/oracle/btrfs-10.image -y seed -i in -o out -u 10 -- lkl/tools/lkl/btrfs-combined-consistency -t btrfs -i samples/oracle/btrfs-10.image -e emulator/emulator.py -l /tmp/mostbench/tmpfs-separate/4/log -d "/tmp/mosbench/tmpfs-separate/4/" -r -p @@
+$ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer -b btrfs1 -s fs/btrfs/btrfs_wrapper.so -e samples/oracle/btrfs-10.image -y seed -i in -o out -u 10 -- lkl/tools/lkl/btrfs-combined-consistency -t btrfs -i samples/oracle/btrfs-10.image -e emulator/emulator.py -l /tmp/mosbench/tmpfs-separate/4/log -d "/tmp/mosbench/tmpfs-separate/4/" -r -p @@
+
+// If you want to run multiple instances fuzzers in parallel,
+// launch a new terminal, and run another instance of fuzzer in slave mode (-S).
+// (Note that all instances should run in slave mode.)
+// Make sure you give different names to the new instance and shm, and map it to
+// different CPU, while maintaining the output directory.
+
+$ mkdir /tmp/mosbench/tmpfs-separate/4/log2
+$ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer2 -b btrfs2 -s fs/btrfs/btrfs_wrapper.so -e samples/oracle/btrfs-10.image -y seed -i in -o out -u 11 -- lkl/tools/lkl/btrfs-combined-consistency -t btrfs -i samples/oracle/btrfs-10.image -e emulator/emulator.py -l /tmp/mosbench/tmpfs-separate/4/log -d "/tmp/mosbench/tmpfs-separate/4/" -r -p @@
 ```
 
 ```
