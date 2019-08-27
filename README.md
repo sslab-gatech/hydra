@@ -31,6 +31,20 @@ $ make build-f2fs-imgwrp
 $ make build-xfs-imgwrp
 ```
 
+* To reproduce bugs presented in the SOSP'19 paper, do the following:
+```
+$ cd src
+$ cd lkl (pwd: proj_root/src/lkl)
+$ make mrproper
+$ git pull
+$ git checkout v4.16-backport
+$ ./compile -t btrfs
+$ ./compile -t ext4
+$ ./compile -t f2fs
+$ ./compile -t xfs
+$ cd .. (pwd: proj_root/src)
+```
+
 4. Set up environments
 ```
 $ sudo ./prepare_fuzzing.sh
@@ -86,8 +100,10 @@ $ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer2 -b btrfs
 ```
 
 6. Important note
+
 It is highly encouraged that you use separate input, output, log directories for each file system, unless you are running fuzzers in parallel. If you reuse the same directories from previous testings of other file systems, it won't work properly.
 
 7. Experiments
+
 Please refer to EXPERIMENTS.md for detailed experiment information.
 

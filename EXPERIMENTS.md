@@ -7,22 +7,6 @@ Reproducing key results of the paper.
 ### 1. Crash inconsistency
 
 - On the **master** branch, follow the instructions in README.md
-- To reproduce bugs presented in the SOSP'19 paper,
-  do the following:
-```
-$ cd src
-$ cd lkl (pwd: proj_root/src/lkl)
-$ make mrproper
-$ git pull
-$ git checkout v4.16-backport
-$ ./compile -t btrfs
-$ ./compile -t ext4
-$ ./compile -t f2fs
-$ ./compile -t xfs
-$ cd .. (pwd: proj_root/src)
-```
-Then, follow steps 4~ in README.md
-
 - Test cases that trigger crash consistency bugs are stored under
   the specified `log` directory.
 - When a bug is found, copy the test case (e.g., `log_dir/tesecaseid.c`)
