@@ -87,3 +87,7 @@ $ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer2 -b btrfs
 
 6. Important note
 It is highly encouraged that you use separate input, output, log directories for each file system, unless you are running fuzzers in parallel. If you reuse the same directories from previous testings of other file systems, it won't work properly.
+
+7. Experiments
+Please refer to EXPERIMENTS.md for detailed experiment information.
+
