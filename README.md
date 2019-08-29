@@ -26,6 +26,10 @@ $ cd src
 3. Run make for each file system
 ```
 $ make build-btrfs-imgwrp
+```
+
+* We can the same for other file systems:
+```
 $ make build-ext4-imgwrp
 $ make build-f2fs-imgwrp
 $ make build-xfs-imgwrp
@@ -33,15 +37,11 @@ $ make build-xfs-imgwrp
 
 * To reproduce bugs presented in the SOSP'19 paper, do the following:
 ```
-$ cd src
-$ cd lkl (pwd: proj_root/src/lkl)
+$ cd lkl (pwd: proj_root/src/lkl) # assuming that you are in the src directory
 $ make mrproper
 $ git pull
 $ git checkout v4.16-backport
 $ ./compile -t btrfs
-$ ./compile -t ext4
-$ ./compile -t f2fs
-$ ./compile -t xfs
 $ cd .. (pwd: proj_root/src)
 ```
 
