@@ -51,52 +51,33 @@ $ sudo ./prepare_fuzzing.sh
 $ ./prepare_env.sh
 ```
 
-Create log directory where crash consistency bug reports will be stored.
-It is highly recommended that you use tmpfs.
+5. Run fuzzing (single instance)
 ```
-$ mkdir /tmp/mosbench/tmpfs-separate/4/log  // use free core (4 in this case)
+$ ./run.py -t [fstype] -c [cpu_id] -l [tmpfs_id] -g [fuzz_group]
+
+-t: choose from btrfs, f2fs, ext4, xfs
+-c: cpu id to run this fuzzer instance
+-l: tmpfs id to store logs (choose one from /tmp/mosbench/tmpfs-separate/)
+-g: specify group id for parallel fuzzing, default: 0
+
+e.g., ./run.py -t btrfs -c 4 -l 10 -g 1
+Runs btrfs fuzzer, and pins the instance to Core #4.
+Logs will be accumulated under /tmp/mosbench/tmpfs-separate/10/log/ .
 ```
 
-5. Run fuzzing!
+You can also run multiple fuzzers in parallel by doing:
 ```
-// Make sure the /dev/shm/ does not contain shm file btrfs1
-// e.g., execute $ rm /dev/shm/btrfs1 before running the command below!
+[Terminal 1] ./run.py -t btrfs -c 1 -l 10 -g 1
+[Terminal 2] ./run.py -t btrfs -c 2 -l 10 -g 1
+[Terminal 3] ./run.py -t btrfs -c 3 -l 10 -g 1
+[Terminal 4] ./run.py -t btrfs -c 4 -l 10 -g 1
+// all btrfs bug logs will be under /tmp/mosbench/tmpfs-separate/10/log/
 
-$ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer -b btrfs1 -s fs/btrfs/btrfs_wrapper.so -e samples/oracle/btrfs-10.image -y seed -i in -o out -u 10 -- lkl/tools/lkl/btrfs-combined-consistency -t btrfs -i samples/oracle/btrfs-10.image -e emulator/emulator.py -l /tmp/mosbench/tmpfs-separate/4/log -d "/tmp/mosbench/tmpfs-separate/4/" -r -p @@
-
-// If you want to run multiple instances fuzzers in parallel,
-// launch a new terminal, and run another instance of fuzzer in slave mode (-S).
-// (Note that all instances should run in slave mode.)
-// Make sure you give different names to the new instance and shm, and map it to
-// different CPU, while maintaining the output directory.
-
-$ mkdir /tmp/mosbench/tmpfs-separate/4/log2
-$ AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S fuzzer2 -b btrfs2 -s fs/btrfs/btrfs_wrapper.so -e samples/oracle/btrfs-10.image -y seed -i in -o out -u 11 -- lkl/tools/lkl/btrfs-combined-consistency -t btrfs -i samples/oracle/btrfs-10.image -e emulator/emulator.py -l /tmp/mosbench/tmpfs-separate/4/log -d "/tmp/mosbench/tmpfs-separate/4/" -r -p @@
-```
-
-```
-// AFL arguments
--S fuzzer00                      : Run AFL in slave mode
--b btrfs1                        : Name of fuzzer instance and shared memory buffer
--s fs/btrfs/btrfs_wrapper.so     : fs-specific parser (try ext4/f2fs/xfs)
--e samples/oracle/btrfs-10.image : Seed image file. Use {FS}-10.image for crash consistency testing, and {FS}-00.image for other bug types.
--y seed                          : Seed program (i.e., sequence of system calls) directory.
-                                   You can create seed programs by running
-                                   `$ ./combined/create_corpus_consistency istat/btrfs-10.istat seed`
--i in                            : Input directory (AFL will fill it up)
--o out                           : Output directory (Regular AFL output will be stored as is)
--u 10                            : CPU id to run this fuzzer instance
-```
-
-```
-// LKL executor arguments
--t btrfs
--i samples/oracle/btrfs-10.image      : Base image file. Should be the same as the -e arg for AFL
--e emulator/emulator.py               : SymC3 emulator path
--l /tmp/mosbench/tmpfs-separate/4/log : Log directory to save consistency bug reports
--d "/tmp/mosbench/tmpfs-separate/4"   : Set this if you are using tmpfs
--r                                    : (Optional) Set -r if you do not want to save crashed image file.
--p @@                                 : AFL sets @@ to the current test case
+[Terminal 5] ./run.py -t f2fs -c 5 -l 11 -g 2
+[Terminal 6] ./run.py -t f2fs -c 6 -l 11 -g 2
+[Terminal 7] ./run.py -t f2fs -c 7 -l 11 -g 2
+[Terminal 8] ./run.py -t f2fs -c 8 -l 11 -g 2
+// all f2fs bug logs will be under /tmp/mosbench/tmpfs-separate/11/log/
 ```
 
 6. Important note
