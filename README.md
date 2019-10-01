@@ -1,4 +1,10 @@
-# Hydra - SOSP19 Artifact
+# Hydra: An Extensible Fuzzing Framework for Finding Semantic Bugs in File Systems
+
+
+## Paper
+
+* [Finding Semantic Bugs in File Systems with an Extensible Fuzzing Framework (SOSP 2019)](https://squizz617.github.io/pubs/hydra-sosp19.pdf)
+
 
 ## Contents
 
@@ -87,4 +93,14 @@ It is highly encouraged that you use separate input, output, log directories for
 7. Experiments
 
 Please refer to EXPERIMENTS.md for detailed experiment information.
+
+
+## Contacts
+
+* Seulbae Kim (seulbae@gatech.edu)
+* Meng Xu (meng.xu@gatech.edu)
+* Sanidhya Kashyap (sanidhya@gatech.edu)
+* Jungyeon Yoon (jungyeon@gatech.edu)
+* Wen Xu (wen.xu@gatech.edu)
+* Taesoo Kim (taesoo@gatech.edu)
 
