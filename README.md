@@ -6,6 +6,19 @@
 * [Finding Semantic Bugs in File Systems with an Extensible Fuzzing Framework (SOSP 2019)](https://squizz617.github.io/pubs/hydra-sosp19.pdf)
 
 
+## Overview
+
+Hydra is a state-of-the-art fuzzing framework for file systems.
+It provides building blocks for file system fuzzing,
+including multi-dimensional input mutators, feedback engines,
+a libOS-based executor, and a bug reproducer with test case minimizer.
+Developers only need to focus on building the core logic
+for finding bugs of their own interests.
+This repository includes our in-house developed
+crash consistency checker (SymC3), with which 9 new crash consistency bugs
+were revealed from ext4, Btrfs, F2FS, and FSCQ.
+
+
 ## Contents
 
 * General code base
@@ -19,29 +32,29 @@
 
 ## Setup
 
-1. All setup should be done under `src`
+### 1. All setup should be done under `src`
 ```
 $ cd src
 ```
 
-2. Install dependencies
+### 2. Install dependencies
 ```
 ./dep.sh
 ```
 
-3. Run make for each file system
+### 3. Compile for each file system
 ```
 $ make build-btrfs-imgwrp
 ```
 
-* We can the same for other file systems:
+* We can do the same for other file systems:
 ```
 $ make build-ext4-imgwrp
 $ make build-f2fs-imgwrp
 $ make build-xfs-imgwrp
 ```
 
-* To reproduce bugs presented in the SOSP'19 paper, do the following:
+* (Skip if you want to test the latest kernel) To reproduce bugs presented in the SOSP'19 paper, do the following to back-port LKL to kernel 4.16.
 ```
 $ cd lkl (pwd: proj_root/src/lkl) # assuming that you are in the src directory
 $ make mrproper
@@ -51,13 +64,16 @@ $ ./compile -t btrfs
 $ cd .. (pwd: proj_root/src)
 ```
 
-4. Set up environments
+### 4. Set up environments
 ```
 $ sudo ./prepare_fuzzing.sh
 $ ./prepare_env.sh
 ```
 
-5. Run fuzzing (single instance)
+### 5. Run fuzzing (single / multiple instance)
+
+* Single instance
+
 ```
 $ ./run.py -t [fstype] -c [cpu_id] -l [tmpfs_id] -g [fuzz_group]
 
@@ -71,7 +87,7 @@ Runs btrfs fuzzer, and pins the instance to Core #4.
 Logs will be accumulated under /tmp/mosbench/tmpfs-separate/10/log/ .
 ```
 
-You can also run multiple fuzzers in parallel by doing:
+* You can also run multiple fuzzers in parallel by doing:
 ```
 [Terminal 1] ./run.py -t btrfs -c 1 -l 10 -g 1
 [Terminal 2] ./run.py -t btrfs -c 2 -l 10 -g 1
@@ -86,11 +102,11 @@ You can also run multiple fuzzers in parallel by doing:
 // all f2fs bug logs will be under /tmp/mosbench/tmpfs-separate/11/log/
 ```
 
-6. Important note
+### 6. Important note
 
 It is highly encouraged that you use separate input, output, log directories for each file system, unless you are running fuzzers in parallel. If you reuse the same directories from previous testings of other file systems, it won't work properly.
 
-7. Experiments
+### 7. Experiments
 
 Please refer to EXPERIMENTS.md for detailed experiment information.
 
