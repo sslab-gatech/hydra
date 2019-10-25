@@ -1,4 +1,4 @@
-ALL = image_test create_corpus create_corpus_consistency program_show program_test program_reserialize fscq fscq-cc # sanity-check
+ALL = image_test create_corpus create_corpus_consistency create_corpus_consistency2 program_show program_test program_reserialize fscq fscq-cc # sanity-check
 CXX ?= g++
 CXXFLAGS = -std=c++11 -g
 TEMP = temp
@@ -12,6 +12,9 @@ create_corpus: create_corpus.o Image.o Program.o Utils.o Constants.o SyscallMuta
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 create_corpus_consistency: create_corpus_consistency.o Image.o Program.o Utils.o Constants.o SyscallMutator.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+create_corpus_consistency2: create_corpus_consistency2.o Image.o Program.o Utils.o Constants.o SyscallMutator.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 program_show: program_show.o Image.o Program.o Utils.o Constants.o
