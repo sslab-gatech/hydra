@@ -66,11 +66,11 @@ void create_corpus(Image *image, char *folder)
             free(buffer);
         }
 
-        open_sm->releaseTarget();
-        delete open_sm;
+        fsync_sm->releaseTarget();
+        delete fsync_sm;
         chmod_sm->releaseTarget();
         delete chmod_sm;
-        fsync_sm->releaseTarget();
+        open_sm->releaseTarget();
         delete open_sm;
 
         program->avail_files.clear();
@@ -81,7 +81,7 @@ void create_corpus(Image *image, char *folder)
 int main(int argc, char *argv[])
 {
     if (argc != 3 && argc != 4) {
-        printf("usage: ./create_corpus istat/btrfs-00.istat DIR\n");
+        printf("usage: ./create_corpus_consistency2 istat/f2fs-10.istat DIR\n");
         return 1;
     }
 
