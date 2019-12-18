@@ -62,7 +62,7 @@ build-lkl-xfs: get-lkl
 
 get-lkl: build-img-sys
 	if [ ! -d "$(LKL_DIR)" ]; then \
-		git clone https://github.com/sslab-gatech/lkl-hydra.git $(LKL_DIR); \
+		git clone https://github.com/sslab-gatech/lkl.git $(LKL_DIR); \
 	fi
 
 build-btrfs-imgwrp: build-lkl-btrfs
