@@ -83,6 +83,12 @@ void adjust_clang_flags(list<string> &params) {
   drop(params, "-fno-var-tracking-assignments");
   drop(params, "-femit-struct-debug-baseonly");
 
+  // GCC
+  drop(params, "-fno-ipa-cp-clone");
+  drop(params, "-fno-partial-inlining");
+  drop(params, "-fno-reorder-blocks");
+  drop(params, "-fmerge-constants");
+
   params.push_back("-Xclang");
   params.push_back("-load");
   params.push_back("-Xclang");
