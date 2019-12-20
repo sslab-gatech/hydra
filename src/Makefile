@@ -68,7 +68,7 @@ get-lkl: build-img-sys
 build-btrfs-imgwrp: build-lkl-btrfs
 	make -C $(BTRFS_IMGWRP_DIR)
 
-build-ext4-imgwrp: build-lkl-ext4
+build-ext4-imgwrp: build-lkl-ext4 get-e2fsprogs
 	make -C $(EXT4_IMGWRP_DIR)
 
 build-f2fs-imgwrp: build-lkl-f2fs

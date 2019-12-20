@@ -14,10 +14,14 @@
 
 #include "ext2fs/ext2_fs.h"
 #include "ext2fs/ext2fs.h"
-#include "config.h"
 
 #define JOURNAL
 #define JOURNAL_INO 8
+
+/* Compatibility for 16.04 */
+#ifndef EXT4_INLINE_DATA_FL
+#define EXT4_INLINE_DATA_FL     0x10000000 /* Inode has inline data */
+#endif 
 
 struct find_block {
   struct ext2_inode *inode;
@@ -48,7 +52,7 @@ static int find_super_and_bgd(ext2_filsys fs, dgrp_t group, struct find_block *f
 	ext2fs_super_and_bgd_loc2(fs, group, &super_blk,
 				  &old_desc_blk, &new_desc_blk, &used_blks);
 
-	if (ext2fs_has_feature_meta_bg(fs->super))
+	if (EXT2_HAS_INCOMPAT_FEATURE(fs->super, EXT2_FEATURE_INCOMPAT_META_BG))
 		old_desc_blocks = fs->super->s_first_meta_bg;
 	else
 		old_desc_blocks = fs->desc_blocks + fs->super->s_reserved_gdt_blocks;
