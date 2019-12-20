@@ -12,3 +12,5 @@ as
 
 *.o
 *.so
+
+afl-fuzz-delayed

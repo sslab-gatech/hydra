@@ -5,3 +5,4 @@ lkl-kasan
 
 /fuzzspace-syscall
 /fuzzspace-image-syscall
+/lkl

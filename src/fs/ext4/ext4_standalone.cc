@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
       FATAL("reading %s failed.", argv[2]);
     close(fd);
 
-    ext4_fuzzer.decompress(tmp_buffer, st.st_size, true);
+    ext4_fuzzer.decompress(tmp_buffer, st.st_size, false);
 
     ext4_fuzzer.sync_to_file(out_path);
 

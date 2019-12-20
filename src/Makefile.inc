@@ -11,7 +11,6 @@ AFL_IMG_SYS_DIR := $(AFL_CMB_DIR)/afl-image-syscall
 
 BTRFS_IMGWRP_DIR    := $(PROJ_DIR)/fs/btrfs
 EXT4_IMGWRP_DIR     := $(PROJ_DIR)/fs/ext4
-EXT4_LIB_DIR        := $(EXT4_IMGWRP_DIR)/e2fsprogs
 F2FS_IMGWRP_DIR     := $(PROJ_DIR)/fs/f2fs
 GFS2_IMGWRP_DIR     := $(PROJ_DIR)/fs/gfs2
 HFSPLUS_IMGWRP_DIR  := $(PROJ_DIR)/fs/hfsplus

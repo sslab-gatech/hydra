@@ -8,3 +8,7 @@ program_show
 sanity-check
 program_test
 program_reserialize
+fscq
+fscq-cc
+create_corpus_consistency
+create_corpus_consistency2
