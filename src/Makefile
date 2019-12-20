@@ -9,7 +9,7 @@ all: readme
 readme:
 	@cat build-note
 
-build-llvm:
+build-llvm: get-llvm
 	if [ ! -d "$(LLVM_BLD)" ]; then \
 		mkdir -p $(LLVM_BLD); \
 	fi
@@ -65,10 +65,19 @@ get-lkl: build-img-sys
 		git clone https://github.com/sslab-gatech/lkl.git $(LKL_DIR); \
 	fi
 
+get-llvm: 
+	if [ ! -d "$(LLVM_DIR)" ]; then \
+		wget http://releases.llvm.org/$(LLVM_VERSION)/$(LLVM_SRC).tar.xz && tar xf $(LLVM_SRC).tar.xz && rm $(LLVM_SRC).tar.xz; \
+		mv $(LLVM_SRC) $(LLVM_DIR); \
+		cd $(LLVM_DIR)/tools && wget http://releases.llvm.org/$(LLVM_VERSION)/$(CLANG_SRC).tar.xz && tar xf $(CLANG_SRC).tar.xz && rm $(CLANG_SRC).tar.xz; \
+		mv $(CLANG_SRC) clang; \
+		cd ../..; \
+	fi
+
 build-btrfs-imgwrp: build-lkl-btrfs
 	make -C $(BTRFS_IMGWRP_DIR)
 
-build-ext4-imgwrp: build-lkl-ext4 get-e2fsprogs
+build-ext4-imgwrp: build-lkl-ext4
 	make -C $(EXT4_IMGWRP_DIR)
 
 build-f2fs-imgwrp: build-lkl-f2fs
