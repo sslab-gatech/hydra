@@ -88,6 +88,7 @@ void adjust_clang_flags(list<string> &params) {
   drop(params, "-fno-partial-inlining");
   drop(params, "-fno-reorder-blocks");
   drop(params, "-fmerge-constants");
+  drop(params, "-fmacro-prefix-map=./=");
 
   params.push_back("-Xclang");
   params.push_back("-load");
