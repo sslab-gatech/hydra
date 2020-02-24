@@ -1,0 +1,34 @@
+# Hydra on FSCQ file system
+
+## Prerequisite
+$ mkdir /tmp/mnt
+$ mkdir /tmp/crashed
+$ ./combined/fscq/mkfs disk.img & cp combined/fscq/disk.img /tmp/mosbench/tmpfs-separate/46/
+$ cp /tmp/mosbench/tmpfs-separate/46/disk.img /tmp/mosbench/tmpfs-separate/46/tmp.img
+$ touch /tmp/prog
+
+## Running
+
+terminal 1
+$ ./combined/fscq-cc /tmp/mnt /tmp/prog
+
+terminal 2
+$ AFL_NO_FORKSRV=1 AFL_FAST_CAL=1 ./combined/afl-fscq-syscall/afl-fuzz -t 1000000 -m none -f /tmp/prog -i /mnt/sdd/wen/fscq-fuzz/seeds -o output -k -e /tmp/mosbench/tmpfs-separate/46/disk.img -p /tmp/mosbench/tmpfs-separate/46/tmp.img -u 4 -- ./fscq/src/fscq /tmp/mosbench/tmpfs-separate/46/tmp.img -f -o big_writes,atomic_o_trunc,use_ino /tmp/mnt
+
+
+## Multiple instances (updated)
+
+1. terminal 1
+```
+$ ./combined/fscq-cc /tmp/mnt-1 /tmp/prog-1 /home/seulbae/fs-greybox-fuzz/src/emulator/fscq.py /tmp/mosbench/tmpfs-separate/0/tmp-1.img &
+$ ./combined/fscq-cc /tmp/mnt-2 /tmp/prog-2 /home/seulbae/fs-greybox-fuzz/src/emulator/fscq.py /tmp/mosbench/tmpfs-separate/0/tmp-2.img &
+$ ./combined/fscq-cc /tmp/mnt-3 /tmp/prog-3 /home/seulbae/fs-greybox-fuzz/src/emulator/fscq.py /tmp/mosbench/tmpfs-separate/0/tmp-3.img &
+```
+
+2. terminal 2
+```
+$ AFL_NO_FORKSRV=1 AFL_FAST_CAL=1 ./combined/afl-fscq-syscall/afl-fuzz -S fscq1 -t 1000000 -m none -f /tmp/prog-1 -i seed-fscq -o output -k -e /tmp/mosbench/tmpfs-separate/0/disk.img -p /tmp/mosbench/tmpfs-separate/0/tmp-1.img -u 1 -- ./fscq/src/fscq /tmp/mosbench/tmpfs-separate/0/tmp-1.img -f -o big_writes,atomic_o_trunc,use_ino /tmp/mnt-1
+$ AFL_NO_FORKSRV=1 AFL_FAST_CAL=1 ./combined/afl-fscq-syscall/afl-fuzz -S fscq2 -t 1000000 -m none -f /tmp/prog-2 -i seed-fscq -o output -k -e /tmp/mosbench/tmpfs-separate/0/disk.img -p /tmp/mosbench/tmpfs-separate/0/tmp-2.img -u 2 -- ./fscq/src/fscq /tmp/mosbench/tmpfs-separate/0/tmp-2.img -f -o big_writes,atomic_o_trunc,use_ino /tmp/mnt-2
+$ AFL_NO_FORKSRV=1 AFL_FAST_CAL=1 ./combined/afl-fscq-syscall/afl-fuzz -S fscq3 -t 1000000 -m none -f /tmp/prog-3 -i seed-fscq -o output -k -e /tmp/mosbench/tmpfs-separate/0/disk.img -p /tmp/mosbench/tmpfs-separate/0/tmp-3.img -u 3 -- ./fscq/src/fscq /tmp/mosbench/tmpfs-separate/0/tmp-3.img -f -o big_writes,    atomic_o_trunc,use_ino /tmp/mnt-3
+```
+
