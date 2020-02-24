@@ -1,0 +1,41 @@
+# tag: cpp
+
+PYTHON setup.py build_ext --inplace
+PYTHON -c "import a"
+
+######## setup.py ########
+
+
+# TODO: Better interface...
+from Cython.Build.Dependencies import cythonize
+
+from distutils.core import setup
+import sys
+if sys.platform == 'win32':
+   MATH_LIBS = []
+else:
+   MATH_LIBS = ['m']
+
+setup(
+  ext_modules = cythonize("*.pyx", aliases={'MATH_LIBS': MATH_LIBS}),
+)
+
+######## my_lib.pxd ########
+
+# distutils: language = c++
+# distutils: libraries = MATH_LIBS
+
+cdef extern from "my_lib_helper.cpp" namespace "A":
+    int x
+
+######## my_lib_helper.cpp #######
+
+namespace A {
+    int x = 100;
+};
+
+######## a.pyx ########
+
+from my_lib cimport x
+
+print x

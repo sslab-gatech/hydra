@@ -443,7 +443,13 @@ def open(argv, varname):
             mode = int(argv[2]) & ~(c.UMASK)
         else:
             mode = 0644
+
         id_fd = c.INODE_CNT
+        # skip inode num 7 if yxv6
+        if c.FSTYPE == c.YXV6 and id_fd == 7:
+            id_fd += 1
+            c.INODE_CNT += 1
+
         inode_mem = c.Inode(id=id_fd, name=name, type=c.FILE, mode=mode, size=0)
         c.MEM[inode_mem.id] = inode_mem
         c.DENTRY[path] = inode_mem.id
@@ -486,6 +492,9 @@ def mkdir(argv):
         id = c.DENTRY[path]
     except KeyError:
         id = c.INODE_CNT
+        if c.FSTYPE == c.YXV6 and id == 7:
+            id += 1
+            c.INODE_CNT += 1
 
     try:
         id_parent = c.DENTRY[parent_path]
@@ -848,6 +857,10 @@ def symlink(argv):
         return 1
 
     id = c.INODE_CNT
+    if c.FSTYPE == c.YXV6 and id == 7:
+        id += 1
+        c.INODE_CNT += 1
+
     inode_mem = c.Inode(id=c.INODE_CNT, name=path2_name, type=c.SYMLINK, mode=0777, size=0)
     inode_mem.target = path1
     inode_mem.size = len(path1)
@@ -1962,6 +1975,13 @@ def truncate(argv):
     _unsync_inode_by_id(id)
 
     inode = c.MEM[id]
+
+    if c.FSTYPE == c.YXV6:
+        if length > inode.size:
+            if c.verbose:
+                print "[-] yxv6 doesn't support truncating to a larger size"
+            return 1
+
     old_length = inode.size
     inode.size = length
 
@@ -2027,6 +2047,13 @@ def ftruncate(argv):
     _unsync_inode_by_id(inode.id)
 
     inode = c.MEM[inode.id]
+
+    if c.FSTYPE == c.YXV6:
+        if length > inode.size:
+            if c.verbose:
+                print "[-] yxv6 doesn't support truncating to a larger size"
+            return 1
+
     old_length = inode.size
     inode.size = length
 
