@@ -444,6 +444,7 @@ HFSPLUS   = 5
 GFS2      = 6
 REISERFS  = 7
 FSCQ      = 8
+YXV6      = 9
 
 # MODE
 S_IRWXU =  0700

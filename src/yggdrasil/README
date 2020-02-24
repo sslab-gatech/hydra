@@ -1,0 +1,72 @@
+See recent updates and contact information at:
+
+	http://locore.cs.washington.edu/yggdrasil/
+
+# How to run the Yxv6 file system
+
+We have tested it using the following setup:
+
+- Cython 0.25.2
+- Python 2
+- Z3 4.4.2 (git commit e3f0aff318b5873cfe858191b8e73ed716405b59)
+- Linux (with FUSE)
+
+Install these packages before proceeding.  Other platforms or
+versions may not work.
+
+To compile:
+
+	$ make all prod
+
+To mount:
+
+	$ python2 yav_xv6_main.py -o max_read=4096 -o max_write=4096 -s a -i /dev/sXX
+
+To run verification:
+
+	$ make verify
+
+If your system doesn't have `cython2`, you may want to change it
+to `cython` in the makefile (similarly for `python2`).
+
+# What are the guarantees of a verified file system in Yggdrasil like Yxv6
+
+The proof is that a file system implementation is a crash refinement
+of its specification.  See the OSDI'16 paper for details.
+
+Note that this does not mean that a verified file system in Yggdrasil
+has zero bugs.  There can be bugs in the specification (or things
+not modeled by the specification, like error code), the verification
+toolchain, and the unverified part (e.g., the glue code to FUSE,
+FUSE itself, and the Linux kernel).
+
+# What's new in this version of Yxv6
+
+This implementation of Yxv6 is a clean-up version.  It mostly follows
+the design described in the OSDI'16 paper, with a few differences:
+
+- the log size is doubled;
+- the garbage collector (for orphan inodes) is more complete;
+- ported to a new version of Cython;
+- moved more code out of the unverified FUSE layer into the verified part.
+
+You may notice changes in runtime performance and verification time
+depending on your platform and tools (e.g., Z3).
+
+# What file system features are missing from Yxv6
+
+Yxv6 is a research prototype.  The implementation has the following
+limitations:
+
+- based on FUSE in user space than in the kernel
+- Python runtime required (even after compiled by Cython)
+- mtime only, no ctime/atime
+- file size is limited
+- verification time may vary depending on the Z3 version
+- no ACL support
+- no fallocate support
+- no hardlinks
+
+We don't think they are necessarily fundamental limitations of the
+toolkit---feel free to send us pull requests if you add some of
+these features.

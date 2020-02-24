@@ -57,6 +57,8 @@ def check_meta(inode, entry, ret_on_err=0, print_err=1):
                 BTRFS_ERRSTR += errstr + "\n"
                 if not c.REGTEST:
                     c.FP_LOG.write(errstr + "\n")
+                if c.FSTYPE == c.FSCQ or c.FSTYPE == c.YXV6:
+                    return 1
 
     # mode
     if not c.FSTYPE == c.FSCQ:
@@ -85,6 +87,8 @@ def check_meta(inode, entry, ret_on_err=0, print_err=1):
                 BTRFS_ERRSTR += errstr + "\n"
                 if not c.REGTEST:
                     c.FP_LOG.write(errstr + "\n")
+                if c.FSTYPE == c.FSCQ or c.FSTYPE == c.YXV6:
+                    return 1
         """
         # blocks
         if inode.numblk != int(entry[c.IDX_BLOCKS]):
@@ -101,6 +105,10 @@ def check_meta(inode, entry, ret_on_err=0, print_err=1):
 
     if c.FSTYPE == c.EXT4: # XXX: temporarily skip xattr check for ext4
         return 0
+
+    if c.FSTYPE == c.YXV6: # yxv6 does not support xattr
+        return 0
+
     # xattr
     xattr_crashed = entry[c.IDX_XATTR]
     pat_xattr = re.compile("(\w+[.]\w+): {1}(.*?), {1}", re.DOTALL)
@@ -170,6 +178,8 @@ def check_symlink(inode, entry, ret_on_err=0, print_err=1):
             BTRFS_ERRSTR += errstr + "\n"
             if not c.REGTEST:
                 c.FP_LOG.write(errstr + "\n")
+            if c.FSTYPE == c.FSCQ or c.FSTYPE == c.YXV6:
+                return 1
     return 0
 
 
@@ -200,6 +210,8 @@ def check_data(inode, entry, ret_on_err=0, print_err=1):
             BTRFS_ERRSTR += errstr + "\n"
             if not c.REGTEST:
                 c.FP_LOG.write(errstr + "\n")
+            if c.FSTYPE == c.FSCQ or c.FSTYPE == c.YXV6:
+                return 1
     return 0
 
 
@@ -518,59 +530,34 @@ def test_fs_history(list_inum_ondisk, METADATA, sd):
         perm = entry[1]
         meta = entry[2]
 
-        # for the record..
-        PARTIAL_METADATA_NOT_ALLOWED = 0
-        if PARTIAL_METADATA_NOT_ALLOWED:
-            if path in dup_path_list:
-                # print "path:", path, "inum:", inode.id
-                ret = 0
-                for img_entry in METADATA:
-                    if img_entry[0] == path:
+        if path in dup_path_list:
+            ret = 0
+            for img_entry in METADATA:
+                if img_entry[0] == path:
+                    if meta:
                         ret += check_meta(inode, img_entry, ret_on_err=1)
                         if inode.type == c.SYMLINK:
                             ret += check_symlink(inode, img_entry, ret_on_err=1)
                         if inode.type == c.FILE:
                             ret += check_data(inode, img_entry, ret_on_err=1)
-                # print "ret:", ret
-                try:
-                    dup_grp[dup_path_list.index(path)].append(ret)
-                except KeyError:
-                    dup_grp[dup_path_list.index(path)] = [ret]
-            else:
-                if meta:
-                    for img_entry in METADATA:
-                        if img_entry[0] == path:
-                            check_meta(inode, img_entry)
-                            if inode.type == c.SYMLINK:
-                                check_symlink(inode, img_entry)
-                            if inode.type == c.FILE:
-                                check_data(inode, img_entry)
+                    else:
+                        ret = 0
+            try:
+                dup_grp[dup_path_list.index(path)].append(ret)
+            except KeyError:
+                dup_grp[dup_path_list.index(path)] = [ret]
         else:
-            if path in dup_path_list:
-                ret = 0
+            if meta:
                 for img_entry in METADATA:
                     if img_entry[0] == path:
-                        if meta:
-                            ret += check_meta(inode, img_entry, ret_on_err=1)
-                            if inode.type == c.SYMLINK:
-                                ret += check_symlink(inode, img_entry, ret_on_err=1)
-                            if inode.type == c.FILE:
-                                ret += check_data(inode, img_entry, ret_on_err=1)
-                        else:
-                            ret = 0
-                try:
-                    dup_grp[dup_path_list.index(path)].append(ret)
-                except KeyError:
-                    dup_grp[dup_path_list.index(path)] = [ret]
-            else:
-                if meta:
-                    for img_entry in METADATA:
-                        if img_entry[0] == path:
-                            check_meta(inode, img_entry)
-                            if inode.type == c.SYMLINK:
-                                check_symlink(inode, img_entry)
-                            if inode.type == c.FILE:
-                                check_data(inode, img_entry)
+                        ret = 0
+                        ret += check_meta(inode, img_entry)
+                        if inode.type == c.SYMLINK:
+                            ret += check_symlink(inode, img_entry)
+                        if inode.type == c.FILE:
+                            ret += check_data(inode, img_entry)
+                        if ret > 0:
+                            found_bug = 1
 
     for gid in dup_grp:
         if 0 not in dup_grp[gid]:
