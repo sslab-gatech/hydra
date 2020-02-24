@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <linux/limits.h>
 
 #include <string>
 #include <iostream>
@@ -13,6 +14,8 @@
 #define VERBOSE 0
 
 using namespace std;
+
+static string yxv6_handler;
 
 int is_mounted (char * dev_path) {
     FILE * mtab = NULL;
@@ -95,7 +98,7 @@ void mount_crashed(char* crashed_img, char *crashed_mpoint) {
             printf("child mounting crashed img\n");
         char *args[11];
         args[0] = const_cast<char*>("python");
-        args[1] = const_cast<char*>("/home/seulbae/workspace/fs-greybox-fuzz/src/yggdrasil/yav_xv6_main.py");
+        args[1] = const_cast<char*>(yxv6_handler.c_str());
         args[2] = const_cast<char*>("-o");
         args[3] = const_cast<char*>("max_read=4096");
         args[4] = const_cast<char*>("-o");
@@ -149,6 +152,11 @@ int main(int argc, char *argv[]) {
     string emul_cmd = emul_path_str + " -d " + crashed_mpoint + " -p " + prog_path_str + "-prev";
 
     string umount_cmd = "fusermount -u " + crashed_mpoint;
+
+    char cwd_buf[PATH_MAX];
+    getcwd(cwd_buf, PATH_MAX);
+    std::string cwd_buf_str(cwd_buf);
+    yxv6_handler = cwd_buf_str + "/yggdrasil/yav_xv6_main.py";
 
     if (VERBOSE)
         printf("init done\n");
