@@ -1,4 +1,4 @@
-ALL = image_test create_corpus create_corpus_consistency create_corpus_consistency2 program_show program_test program_reserialize fscq fscq-cc # sanity-check
+ALL = image_test create_corpus create_corpus_consistency program_show program_test program_reserialize afl fscq-cc yxv6-cc
 CXX ?= g++
 CXXFLAGS = -std=c++11 -g
 TEMP = temp
@@ -14,9 +14,6 @@ create_corpus: create_corpus.o Image.o Program.o Utils.o Constants.o SyscallMuta
 create_corpus_consistency: create_corpus_consistency.o Image.o Program.o Utils.o Constants.o SyscallMutator.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-create_corpus_consistency2: create_corpus_consistency2.o Image.o Program.o Utils.o Constants.o SyscallMutator.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
-
 program_show: program_show.o Image.o Program.o Utils.o Constants.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
@@ -26,11 +23,14 @@ program_reserialize: program_reserialize.o Image.o Program.o Utils.o Constants.o
 program_test: program_test.o Image.o Program.o Utils.o Constants.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-fscq: FSCQ.o Image.o Program.o Utils.o Constants.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
-
 fscq-cc: FSCQ-consistency-exec.o Image.o Program.o Utils.o Constants.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
+
+yxv6-cc: yxv6-consistency-exec.o Image.o Program.o Utils.o Constants.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+afl:
+	make -C afl-syscall 
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -fPIC -c -o $@ $<
