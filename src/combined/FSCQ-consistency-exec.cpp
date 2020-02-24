@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <linux/limits.h>
 
 #include <string>
 #include <iostream>
@@ -11,6 +12,8 @@
 #include "Program.hpp"
 
 #define VERBOSE 0
+
+static string fscq_handler;
 
 using namespace std;
 
@@ -94,7 +97,7 @@ void mount_crashed(char* crashed_img, char *crashed_mpoint) {
         if (VERBOSE)
             printf("child mounting crashed img\n");
         char *args[4];
-        args[0] = const_cast<char*>("/home/seulbae/fs-greybox-fuzz/src/fscq/src/fscq");
+        args[0] = const_cast<char*>(fscq_handler.c_str());
         args[1] = const_cast<char*>(crashed_img);
         args[2] = const_cast<char*>("-f");
         args[3] = const_cast<char*>("-o");
@@ -144,6 +147,11 @@ int main(int argc, char *argv[]) {
     string emul_cmd = emul_path_str + " -d " + crashed_mpoint + " -p " + prog_path_str + "-prev";
 
     string umount_cmd = "fusermount -u " + crashed_mpoint;
+
+    char cwd_buf[PATH_MAX];
+    getcwd(cwd_buf, PATH_MAX);
+    std::string cwd_buf_str(cwd_buf);
+    fscq_handler = cwd_buf_str + "/fscq/src/fscq";
 
     while (1) {
         while (!is_mounted(mpoint)) {
