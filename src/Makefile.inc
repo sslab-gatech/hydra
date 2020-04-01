@@ -18,6 +18,7 @@ RSR_IMGWRP_DIR      := $(PROJ_DIR)/fs/reiserfs
 VFAT_IMGWRP_DIR     := $(PROJ_DIR)/fs/vfat
 SDCARDFS_IMGWRP_DIR := $(PROJ_DIR)/fs/sdcardfs
 XFS_IMGWRP_DIR      := $(PROJ_DIR)/fs/xfs
+XFS_IMGWRP_DB_DIR   := $(PROJ_DIR)/fs/xfs/xfsprogs-dev/db
 
 LLVM_BLD  := $(PROJ_DIR)/llvm-build
 CLANG     := $(LLVM_BLD)/bin/clang

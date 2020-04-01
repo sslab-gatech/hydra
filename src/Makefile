@@ -85,5 +85,7 @@ build-f2fs-imgwrp: build-lkl-f2fs
 
 build-xfs-imgwrp: build-lkl-xfs
 	make -C $(XFS_IMGWRP_DIR)
+	make -C $(XFS_IMGWRP_DB_DIR)
+	cd $(XFS_IMGWRP_DB_DIR); sudo make install; cd $(PROJ_DIR);
 
 distclean: clean-afl-llvm-mode clean-afl clean-syscall clean-ffgcc
