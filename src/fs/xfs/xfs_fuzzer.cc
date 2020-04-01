@@ -139,6 +139,8 @@ void xfs_fuzzer::compress(
     meta_block_cnt++;
   }
   close(meta_image_fd);
+  if (meta_block_cnt == 0)
+    FATAL("[-] no meta_block is found.");
 
   // read crc info
   int crc_info_fd = open(crc_info_path, O_RDONLY);
