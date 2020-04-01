@@ -114,13 +114,19 @@ void xfs_fuzzer::compress(
     args[4] = const_cast<char*>(meta_path);
     args[5] = const_cast<char*>(crc_info_path);
     args[6] = NULL;
-    execvp(args[0], args);
+    if (execvp(args[0], args) < 0) {
+      FATAL("[-] xfs_fuzz_metadump -a -o %s %s %s failed.", in_path, meta_path, crc_info_path);
+    }
   }
 
   waitpid(pid, &status, 0);
+
   
   // read meta image
   int meta_image_fd = open(meta_path, O_RDONLY);
+  if (meta_image_fd < 0)
+    FATAL("[-] could not open meta image %s.", meta_path);
+
   uint64_t blknum;
   std::set<uint64_t> meta_blocks;
   uint64_t meta_block_cnt = 0;
@@ -136,6 +142,9 @@ void xfs_fuzzer::compress(
 
   // read crc info
   int crc_info_fd = open(crc_info_path, O_RDONLY);
+  if (crc_info_fd < 0)
+    FATAL("[-] could not open crc info file %s.", meta_path);
+
   crc_info_t crc_info;
   while (read(crc_info_fd, &crc_info, sizeof(uint64_t) * 3) == sizeof(uint64_t) * 3) {
     crc_infos.push_back(crc_info);
