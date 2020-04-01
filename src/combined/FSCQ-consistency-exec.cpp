@@ -13,9 +13,8 @@
 
 #define VERBOSE 0
 
-static string fscq_handler;
-
 using namespace std;
+static string fscq_handler;
 
 int is_mounted (char * dev_path) {
     FILE * mtab = NULL;
