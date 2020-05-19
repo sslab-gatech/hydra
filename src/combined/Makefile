@@ -1,4 +1,4 @@
-ALL = image_test create_corpus create_corpus_consistency program_show program_test program_reserialize afl fscq-cc yxv6-cc
+ALL = image_test create_corpus create_corpus_consistency program_show program_test program_reserialize fscq-cc yxv6-cc
 CXX ?= g++
 CXXFLAGS = -std=c++11 -g
 TEMP = temp
@@ -28,9 +28,6 @@ fscq-cc: FSCQ-consistency-exec.o Image.o Program.o Utils.o Constants.o
 
 yxv6-cc: yxv6-consistency-exec.o Image.o Program.o Utils.o Constants.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
-afl:
-	make -C afl-syscall 
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -fPIC -c -o $@ $<
