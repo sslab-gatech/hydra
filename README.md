@@ -3,7 +3,8 @@
 
 ## Paper
 
-* [Finding Semantic Bugs in File Systems with an Extensible Fuzzing Framework (SOSP 2019)](https://squizz617.github.io/pubs/hydra-sosp19.pdf)
+* [Finding Semantic Bugs in File Systems with an Extensible Fuzzing Framework (SOSP 2019)](https://squizz617.github.io/pubs/hydra-sosp19.pdf) - original paper
+* [Finding Bugs in File Systems with an Extensible Fuzzing Framework (ACM Transactions on Storage, Vol. 16, No. 2)](https://squizz617.github.io/pubs/hydra-tos20.pdf) - includes more details
 
 
 ## Overview
@@ -12,11 +13,15 @@ Hydra is a state-of-the-art fuzzing framework for file systems.
 It provides building blocks for file system fuzzing,
 including multi-dimensional input mutators, feedback engines,
 a libOS-based executor, and a bug reproducer with test case minimizer.
-Developers only need to focus on building the core logic
-for finding bugs of their own interests.
-This repository includes our in-house developed
-crash consistency checker (SymC3), with which 9 new crash consistency bugs
-were revealed from ext4, Btrfs, F2FS, and FSCQ.
+Developers only need to focus on writing (or bringing in) a checker
+which defines the core logic for finding the types of bugs
+of their own interests.
+Along with the framework,
+this repository includes our in-house developed
+crash consistency checker (SymC3),
+with which 11 new crash consistency bugs
+were revealed from `ext4`, `Btrfs`, `F2FS`,
+and from two verified file systems: `FSCQ` and `Yxv6`.
 
 
 ## Contents
