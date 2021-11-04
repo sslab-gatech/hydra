@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 import subprocess, sys
 
 image_buf = open(sys.argv[1], 'rb').read()

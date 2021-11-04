@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include <sys/stat.h>
 #include <set>
 #include <map>

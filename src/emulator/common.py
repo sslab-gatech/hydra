@@ -1,5 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+
+# SPDX-License-Identifier: MIT
+
 import os
 import common as c
 

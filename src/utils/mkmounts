@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# SPDX-License-Identifier: MIT
+
 set -e
 
 BASE=/tmp/mosbench

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 /**
     program_test.cpp
     Purpose: doing some internal testing here

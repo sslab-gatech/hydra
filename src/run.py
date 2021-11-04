@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# SPDX-License-Identifier: MIT
+
 import os
 import sys
 import argparse
@@ -68,6 +70,7 @@ if __name__ == "__main__":
         os.system("sudo rm /dev/shm/%s" % shm_name)
 
     cmd = 'AFL_SKIP_BIN_CHECK=1 ./combined/afl-image-syscall/afl-fuzz -S {0} -b {1} -s fs/{2}/{2}_wrapper.so -e samples/oracle/{2}-10.image -y seed -i {3} -o {4} -u {5} -- lkl/tools/lkl/{2}-combined-consistency -t {2} -i samples/oracle/{2}-10.image -e emulator/emulator.py -l /tmp/mosbench/tmpfs-separate/{6}/log -d "/tmp/mosbench/tmpfs-separate/{6}/" -r -p @@'.format(instance_name, shm_name, args.fstype, in_dir, out_dir, args.cpu_id, args.log_id)
+    print(cmd)
 
     os.system(cmd)
 

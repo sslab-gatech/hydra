@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "ext4_fuzzer.hh"
 #include "utils.hh"
 

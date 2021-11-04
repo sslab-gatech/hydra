@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef _IMAGE_HPP
 #define _IMAGE_HPP
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "Constants.hpp"
 
 const char *syscall_name[] = {

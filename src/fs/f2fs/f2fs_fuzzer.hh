@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef FS_FUZZ_F2FS_FUZZER_HH
 #define FS_FUZZ_F2FS_FUZZER_HH
 

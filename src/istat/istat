@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# SPDX-License-Identifier: MIT
+
 import argparse, errno, os, shutil, subprocess, sys, tempfile, pwd, struct, xattr
 from stat import *
 import pathlib2

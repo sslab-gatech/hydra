@@ -1,4 +1,7 @@
 #!/usr/bin/python2
+
+# SPDX-License-Identifier: MIT
+
 import os, sys, subprocess
 
 d = sys.argv[1]

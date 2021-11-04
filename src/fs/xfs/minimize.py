@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 import subprocess, sys
 
 image_path = sys.argv[1]

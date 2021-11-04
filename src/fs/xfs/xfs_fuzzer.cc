@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include <iostream>
 #include <set>
 #include <string>

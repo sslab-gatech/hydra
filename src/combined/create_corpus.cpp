@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 /**
     create_corpus.cpp
     Purpose: generate initial testing corpus for an image

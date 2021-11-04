@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 /**
   program_reserialize.cpp
   Purpose: generate C code for a serialized testcase

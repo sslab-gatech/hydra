@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef _PROGRAM_HPP
 #define _PROGRAM_HPP
 

@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# SPDX-License-Identifier: MIT
+
 import os
 import string
 import random

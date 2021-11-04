@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 /*
  * For testing the syscall fuzzer for file system.
  * Take serialized program as an input
