@@ -23,6 +23,8 @@ with which 11 new crash consistency bugs
 were revealed from `ext4`, `Btrfs`, `F2FS`,
 and from two verified file systems: `FSCQ` and `Yxv6`.
 
+This repository is provided under the terms of MIT license.
+
 
 ## Contents
 
