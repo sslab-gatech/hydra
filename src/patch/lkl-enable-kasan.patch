@@ -1,0 +1,1515 @@
+diff --git a/arch/lkl/Kconfig b/arch/lkl/Kconfig
+index b85352cddd88..ff1e490c9156 100644
+--- a/arch/lkl/Kconfig
++++ b/arch/lkl/Kconfig
+@@ -2,6 +2,7 @@ config LKL
+        def_bool y
+        depends on !SMP && !MMU && !COREDUMP && !SECCOMP && !UPROBES && !COMPAT && !USER_RETURN_NOTIFIER
+        select ARCH_THREAD_STACK_ALLOCATOR
++       select HAVE_ARCH_KASAN
+        select RWSEM_GENERIC_SPINLOCK
+        select GENERIC_ATOMIC64
+        select GENERIC_HWEIGHT
+@@ -37,6 +38,8 @@ config LKL
+        # select IP_ADVANCED_ROUTER
+        # select IPV6_ADVANCED_ROUTER
+        select ARCH_NO_COHERENT_DMA_MMAP
++config STACKTRACE_SUPPORT
++	def_bool n
+ 
+ config OUTPUTFORMAT
+        string
+@@ -92,3 +95,5 @@ source lib/Kconfig
+ 
+ source lib/Kconfig.debug
+ 
++source lib/Kconfig.kasan
++
+diff --git a/arch/lkl/Makefile b/arch/lkl/Makefile
+index 01f08211360e..7b1ccc78d134 100644
+--- a/arch/lkl/Makefile
++++ b/arch/lkl/Makefile
+@@ -1,5 +1,7 @@
+ include arch/lkl/auto.conf
+ 
++KASAN_SANITIZE := n
++
+ KBUILD_CFLAGS += -fno-builtin
+ 
+ ifneq (,$(filter $(OUTPUT_FORMAT),elf64-x86-64 elf64-x86-64-freebsd elf32-littlearm elf64-littleaarch64))
+@@ -25,10 +27,12 @@ endif
+ 
+ LDFLAGS_vmlinux += -r
+ LKL_ENTRY_POINTS := lkl_start_kernel lkl_sys_halt lkl_syscall lkl_trigger_irq \
+-	lkl_get_free_irq lkl_put_irq lkl_is_running
++	lkl_get_free_irq lkl_put_irq lkl_is_running \
++	lkl_kasan_init
+ 
+ core-y += arch/lkl/kernel/
+ core-y += arch/lkl/mm/
++core-y += arch/lkl/lib/
+ 
+ all: lkl.o
+ 
+diff --git a/arch/lkl/defconfig b/arch/lkl/defconfig
+index ef02cc9815b1..09dc51de167b 100644
+--- a/arch/lkl/defconfig
++++ b/arch/lkl/defconfig
+@@ -1,3 +1,13 @@
++CONFIG_SLUB=y
++CONFIG_SLAB=n
++CONFIG_SLUB_DEBUG=y
++CONFIG_SLUB_DEBUG_ON=y
++CONFIG_HAVE_ARCH_KASAN=y
++CONFIG_KASAN=y
++CONFIG_KASAN_OUTLINE=y
++CONFIG_KASAN_INLINE=n
++CONFIG_KASAN_TEST_ON_CHDIR=y
++CONFIG_KASAN_PANIC_ON_ERROR=n
+ # CONFIG_LOCALVERSION_AUTO is not set
+ CONFIG_NO_HZ_IDLE=y
+ # CONFIG_SYSFS_SYSCALL is not set
+diff --git a/arch/lkl/include/asm/kasan.h b/arch/lkl/include/asm/kasan.h
+new file mode 100644
+index 000000000000..b9a5e265c0f3
+--- /dev/null
++++ b/arch/lkl/include/asm/kasan.h
+@@ -0,0 +1,51 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef _ASM_LKL_KASAN_H
++#define _ASM_LKL_KASAN_H
++
++#include <linux/const.h>
++
++extern unsigned long memory_start, memory_end;
++extern unsigned long lkl_kasan_shadow_start;
++extern unsigned long lkl_kasan_shadow_end;
++extern unsigned long lkl_kasan_stack_start;
++extern unsigned long lkl_kasan_stack_end;
++extern unsigned long lkl_kasan_stack_shadow_start;
++extern unsigned long lkl_kasan_stack_shadow_end;
++
++#define KASAN_SHADOW_OFFSET (lkl_kasan_shadow_start - (memory_start >> 3))
++#define KASAN_STACK_SHADOW_OFFSET (lkl_kasan_stack_shadow_start - (lkl_kasan_stack_start >> 3))
++#define KASAN_SHADOW_SCALE_SHIFT 3
++/*
++ * Compiler uses shadow offset assuming that addresses start
++ * from 0. Kernel addresses don't start from 0, so shadow
++ * for kernel really starts from compiler's shadow offset +
++ * 'kernel address space start' >> KASAN_SHADOW_SCALE_SHIFT
++ */
++/*#define KASAN_SHADOW_START      (KASAN_SHADOW_OFFSET - \
++					((memory_start) >> \
++						KASAN_SHADOW_SCALE_SHIFT))
++*/
++#define KASAN_SHADOW_START (lkl_kasan_shadow_start)
++/*
++ * 47 bits for kernel address -> (47 - KASAN_SHADOW_SCALE_SHIFT) bits for shadow
++ * 56 bits for kernel address -> (56 - KASAN_SHADOW_SCALE_SHIFT) bits for shadow
++ */
++/*#define KASAN_SHADOW_END        (KASAN_SHADOW_START + \
++					(mem_size >> \
++						  KASAN_SHADOW_SCALE_SHIFT))
++*/
++
++#define KASAN_SHADOW_END (lkl_kasan_shadow_end)
++#ifndef __ASSEMBLY__
++
++#ifdef CONFIG_KASAN
++void kasan_early_init(void);
++void kasan_init(void);
++#else
++static inline void kasan_early_init(void) { }
++static inline void kasan_init(void) { }
++#endif
++
++#endif //ASSEM
++
++#endif //KASAN_H
+diff --git a/arch/lkl/kernel/Makefile b/arch/lkl/kernel/Makefile
+index ef489f2f7176..66b57f580fb4 100644
+--- a/arch/lkl/kernel/Makefile
++++ b/arch/lkl/kernel/Makefile
+@@ -1,3 +1,5 @@
++KASAN_SANITIZE := n
++
+ extra-y := vmlinux.lds
+ 
+ obj-y = setup.o threads.o irq.o time.o syscalls.o misc.o console.o \
+diff --git a/arch/lkl/kernel/setup.c b/arch/lkl/kernel/setup.c
+index 209d8df1c32d..c2dd1b19ba79 100644
+--- a/arch/lkl/kernel/setup.c
++++ b/arch/lkl/kernel/setup.c
+@@ -13,6 +13,7 @@
+ #include <asm/syscalls.h>
+ #include <asm/cpu.h>
+ 
++#include <linux/kasan.h>
+ struct lkl_host_operations *lkl_ops;
+ static char cmd_line[COMMAND_LINE_SIZE];
+ static void *init_sem;
+@@ -45,6 +46,9 @@ static void __init lkl_run_kernel(void *arg)
+ {
+ 	threads_init();
+ 	lkl_cpu_get();
++#ifdef CONFIG_KASAN
++        init_task.kasan_depth = 0;
++#endif
+ 	start_kernel();
+ }
+ 
+diff --git a/arch/lkl/kernel/syscalls.c b/arch/lkl/kernel/syscalls.c
+index adef2e397faa..7506d3d69a33 100644
+--- a/arch/lkl/kernel/syscalls.c
++++ b/arch/lkl/kernel/syscalls.c
+@@ -64,6 +64,8 @@ static int new_host_task(struct task_struct **task)
+ 
+ 	switch_to_host_task(host0);
+ 
++        // we may need this for stack
++	//kasan_unpoison_task_stack(host0);
+ 	pid = kernel_thread(host_task_stub, NULL, CLONE_FLAGS);
+ 	if (pid < 0)
+ 		return pid;
+diff --git a/arch/lkl/lib/Makefile b/arch/lkl/lib/Makefile
+new file mode 100644
+index 000000000000..583c031992b4
+--- /dev/null
++++ b/arch/lkl/lib/Makefile
+@@ -0,0 +1,11 @@
++# SPDX-License-Identifier: GPL-2.0
++#
++# Makefile for x86 specific library files.
++#
++
++# Produces uninteresting flaky coverage.
++KASAN_SANITIZE := n
++
++obj-y += lkl_mem.o
++obj-y += kasan.o
++
+diff --git a/arch/lkl/lib/kasan.c b/arch/lkl/lib/kasan.c
+new file mode 100644
+index 000000000000..a68af0bf65c8
+--- /dev/null
++++ b/arch/lkl/lib/kasan.c
+@@ -0,0 +1,47 @@
++#include <asm/kasan.h>
++//#include <linux/kasan.h>
++#include <asm/host_ops.h>
++#include <linux/export.h>
++#ifdef CONFIG_KASAN
++
++extern short kasan_allocated_mem;
++extern unsigned long memory_start, memory_end;
++unsigned long lkl_kasan_shadow_start;
++unsigned long lkl_kasan_shadow_end;
++unsigned long lkl_kasan_stack_start;
++unsigned long lkl_kasan_stack_end;
++unsigned long lkl_kasan_stack_shadow_start;
++unsigned long lkl_kasan_stack_shadow_end;
++unsigned long readable_size;
++void kasan_early_init(void) {
++    ;
++}
++
++void kasan_init(void) {
++    ;
++}
++ __no_sanitize_address unsigned long lkl_kasan_init(struct lkl_host_operations* ops,
++        unsigned long mem_sz,
++        unsigned long stack_base,
++        unsigned long stack_size) {
++    struct lkl_host_operations *lkl_ops = ops;
++    lkl_kasan_shadow_start = lkl_ops->mem_alloc(mem_sz); //XXX
++    lkl_kasan_shadow_end = lkl_kasan_shadow_start + (mem_sz); //XXX
++    kasan_allocated_mem = 1;
++    memory_start = (unsigned long)lkl_ops->mem_alloc(mem_sz);
++    memory_end = memory_start + mem_sz;
++
++    lkl_kasan_stack_start = stack_base;
++    lkl_kasan_stack_end = stack_base + stack_size;
++
++    lkl_kasan_stack_shadow_start = lkl_ops->mem_alloc(stack_size);
++    lkl_kasan_stack_shadow_end = lkl_kasan_stack_shadow_start + stack_size;
++
++    return lkl_kasan_stack_start;
++}
++#else
++
++unsigned long lkl_kasan_init(struct lkl_host_operations* ops, unsigned long mem_sz) {
++    return 1;
++}
++#endif
+diff --git a/arch/lkl/lib/lkl_mem.c b/arch/lkl/lib/lkl_mem.c
+new file mode 100644
+index 000000000000..5f822eeaa7a6
+--- /dev/null
++++ b/arch/lkl/lib/lkl_mem.c
+@@ -0,0 +1,3 @@
++#include <uapi/asm-generic/posix_types.h>
++//XXX
++
+diff --git a/arch/lkl/mm/bootmem.c b/arch/lkl/mm/bootmem.c
+index 15fc03d7b711..4a51ec84ee00 100644
+--- a/arch/lkl/mm/bootmem.c
++++ b/arch/lkl/mm/bootmem.c
+@@ -1,9 +1,12 @@
+ #include <linux/bootmem.h>
+ #include <linux/mm.h>
+ #include <linux/swap.h>
++#include <asm/kasan.h>
++#include <linux/kasan.h>
+ 
+ unsigned long memory_start, memory_end;
+ static unsigned long _memory_start, mem_size;
++short kasan_allocated_mem;
+ 
+ void *empty_zero_page;
+ 
+@@ -12,11 +15,22 @@ void __init bootmem_init(unsigned long mem_sz)
+ 	unsigned long bootmap_size;
+ 
+ 	mem_size = mem_sz;
+-
+-	_memory_start = (unsigned long)lkl_ops->mem_alloc(mem_size);
+-	memory_start = _memory_start;
++#ifdef CONFIG_KASAN
++        kasan_allocated_mem = kasan_allocated_mem;
++#else
++        kasan_allocated_mem = 0;
++#endif
++        if(kasan_allocated_mem != 1) {
++            _memory_start = (unsigned long)lkl_ops->mem_alloc(mem_size);
++            memory_start = _memory_start;
++            memory_end = memory_start + mem_size;
++        }
++        else {
++            _memory_start = memory_start;
++            BUG_ON(memory_end != memory_start + mem_size);
++        }
+ 	BUG_ON(!memory_start);
+-	memory_end = memory_start + mem_size;
++
+ 
+ 	if (PAGE_ALIGN(memory_start) != memory_start) {
+ 		mem_size -= PAGE_ALIGN(memory_start) - memory_start;
+@@ -25,6 +39,14 @@ void __init bootmem_init(unsigned long mem_sz)
+ 	}
+ 	pr_info("bootmem address range: 0x%lx - 0x%lx\n", memory_start,
+ 		memory_start+mem_size);
++#ifdef CONFIG_KASAN
++        pr_info("kasan shadow range: 0x%lx - 0x%lx\n", lkl_kasan_shadow_start,
++                lkl_kasan_shadow_end);
++        pr_info("mem_base: 0x%lx\n", memory_start);
++        pr_info("shadow for mem_base: 0x%lx\n", kasan_mem_to_shadow(memory_start));
++        pr_info("KASAN_SHADOW_START:  0x%lx\n", KASAN_SHADOW_START);
++        pr_info("KASAN_SHADOW_END:    0x%lx\n", KASAN_SHADOW_END);
++#endif
+ 	/*
+ 	 * Give all the memory to the bootmap allocator, tell it to put the
+ 	 * boot mem_map at the start of memory.
+diff --git a/btrfs-config b/btrfs-config
+index ef02cc9815b1..09dc51de167b 100644
+--- a/btrfs-config
++++ b/btrfs-config
+@@ -1,3 +1,13 @@
++CONFIG_SLUB=y
++CONFIG_SLAB=n
++CONFIG_SLUB_DEBUG=y
++CONFIG_SLUB_DEBUG_ON=y
++CONFIG_HAVE_ARCH_KASAN=y
++CONFIG_KASAN=y
++CONFIG_KASAN_OUTLINE=y
++CONFIG_KASAN_INLINE=n
++CONFIG_KASAN_TEST_ON_CHDIR=y
++CONFIG_KASAN_PANIC_ON_ERROR=n
+ # CONFIG_LOCALVERSION_AUTO is not set
+ CONFIG_NO_HZ_IDLE=y
+ # CONFIG_SYSFS_SYSCALL is not set
+diff --git a/compile b/compile
+index 27c597babb8a..8df019602cf7 100755
+--- a/compile
++++ b/compile
+@@ -8,6 +8,7 @@ if __name__ == '__main__':
+   parser = argparse.ArgumentParser()
+   parser.add_argument('-t', dest='type')
+   parser.add_argument('-c', action='store_true')
++  parser.add_argument('-k', action='store_true') ## kasan
+   # parser.add_argument('-o', dest='object')
+   
+   args = parser.parse_args()
+@@ -29,7 +30,11 @@ if __name__ == '__main__':
+   
+   # compile with instrumenting gcc
+   dir_path = os.path.dirname(os.path.realpath(__file__))
+-  subprocess.call('make -C tools/lkl -j CC="%s/../ff-gcc/ff-gcc fs/%s"' % (dir_path, args.type), shell=True)
++  if args.k:
++    wrapper = 'ff-gcc-kasan'
++  else:
++    wrapper = 'ff-gcc'
++  subprocess.call(('make -C tools/lkl -j CC="%s/../ff-gcc/' + wrapper + ' fs/%s"') % (dir_path, args.type), shell=True)
+ 
+   # copy object file
+   subprocess.call('cp -f tools/lkl/fsfuzz tools/lkl/%s-fsfuzz' % args.type, shell=True)
+diff --git a/fs/open.c b/fs/open.c
+index d0e955b558ad..a5d209b3fea3 100644
+--- a/fs/open.c
++++ b/fs/open.c
+@@ -446,6 +446,18 @@ int ksys_chdir(const char __user *filename)
+ 	struct path path;
+ 	int error;
+ 	unsigned int lookup_flags = LOOKUP_FOLLOW | LOOKUP_DIRECTORY;
++#ifdef CONFIG_KASAN_TEST_ON_CHDIR
++
++        char* ti2;
++        char* ti = kmalloc(1000*sizeof(char), GFP_KERNEL);
++        *(ti+8+1000) = 4;
++        *(ti+400+1000) = 4;
++        kfree(ti);
++        ti2 = kmalloc(1000*sizeof(char), GFP_KERNEL);
++        kfree(ti);
++        *ti = 10;
++
++#endif
+ retry:
+ 	error = user_path_at(AT_FDCWD, filename, lookup_flags, &path);
+ 	if (error)
+diff --git a/include/linux/compiler-clang.h b/include/linux/compiler-clang.h
+index 7d98e263e048..e4a234f0c55e 100644
+--- a/include/linux/compiler-clang.h
++++ b/include/linux/compiler-clang.h
+@@ -26,7 +26,7 @@
+ #endif
+ 
+ #undef __no_sanitize_address
+-#define __no_sanitize_address __attribute__((no_sanitize("address")))
++#define __no_sanitize_address __attribute__((no_sanitize("kernel-address")))
+ 
+ /* Clang doesn't have a way to turn it off per-function, yet. */
+ #ifdef __noretpoline
+diff --git a/include/linux/kasan.h b/include/linux/kasan.h
+index de784fd11d12..c7e67eb34df9 100644
+--- a/include/linux/kasan.h
++++ b/include/linux/kasan.h
+@@ -14,19 +14,36 @@ struct task_struct;
+ #include <asm/kasan.h>
+ #include <asm/pgtable.h>
+ 
++#ifdef CONFIG_MMU
+ extern unsigned char kasan_zero_page[PAGE_SIZE];
+ extern pte_t kasan_zero_pte[PTRS_PER_PTE];
+ extern pmd_t kasan_zero_pmd[PTRS_PER_PMD];
+ extern pud_t kasan_zero_pud[PTRS_PER_PUD];
+ extern p4d_t kasan_zero_p4d[MAX_PTRS_PER_P4D];
++#endif
+ 
+ void kasan_populate_zero_shadow(const void *shadow_start,
+ 				const void *shadow_end);
+ 
+ static inline void *kasan_mem_to_shadow(const void *addr)
+ {
++    unsigned long shadow_offset;
++    shadow_offset = KASAN_SHADOW_OFFSET;
++#ifdef CONFIG_LKL
++    if((unsigned long)addr >= memory_start &&
++            (unsigned long)addr <= memory_end) {
++        shadow_offset = KASAN_SHADOW_OFFSET;
++    }
++    else if ((unsigned long)addr >= lkl_kasan_stack_start &&
++            (unsigned long)addr <= lkl_kasan_stack_end) {
++        shadow_offset = KASAN_STACK_SHADOW_OFFSET;
++    }
++    else {
++        panic("failed at mem_to_shadow\n");
++    }
++#endif
+ 	return (void *)((unsigned long)addr >> KASAN_SHADOW_SCALE_SHIFT)
+-		+ KASAN_SHADOW_OFFSET;
++		+ shadow_offset;
+ }
+ 
+ /* Enable reporting bugs after kasan_disable_current() */
+diff --git a/include/linux/slab.h b/include/linux/slab.h
+index 81ebd71f8c03..f73c08394fc6 100644
+--- a/include/linux/slab.h
++++ b/include/linux/slab.h
+@@ -15,6 +15,7 @@
+ #include <linux/gfp.h>
+ #include <linux/types.h>
+ #include <linux/workqueue.h>
++#include <linux/kasan.h>
+ 
+ 
+ /*
+@@ -125,7 +126,6 @@
+ #define ZERO_OR_NULL_PTR(x) ((unsigned long)(x) <= \
+ 				(unsigned long)ZERO_SIZE_PTR)
+ 
+-#include <linux/kasan.h>
+ 
+ struct mem_cgroup;
+ /*
+@@ -407,6 +407,11 @@ kmem_cache_alloc_node_trace(struct kmem_cache *s,
+ #endif /* CONFIG_NUMA */
+ 
+ #else /* CONFIG_TRACING */
++
++//XXX
++void kasan_kmalloc(struct kmem_cache *s, const void *object, size_t size,
++		  gfp_t flags);
++
+ static __always_inline void *kmem_cache_alloc_trace(struct kmem_cache *s,
+ 		gfp_t flags, size_t size)
+ {
+diff --git a/init/Makefile b/init/Makefile
+index a3e5ce2bcf08..283c0913c64d 100644
+--- a/init/Makefile
++++ b/init/Makefile
+@@ -3,6 +3,7 @@
+ # Makefile for the linux kernel.
+ #
+ 
++KASAN_SANITIZE := n
+ ccflags-y := -fno-function-sections -fno-data-sections
+ 
+ obj-y                          := main.o version.o mounts.o
+diff --git a/kernel/Makefile b/kernel/Makefile
+index f85ae5dfa474..b56070c7eb0b 100644
+--- a/kernel/Makefile
++++ b/kernel/Makefile
+@@ -2,7 +2,7 @@
+ #
+ # Makefile for the linux kernel.
+ #
+-
++KASAN_SANITIZE := n
+ obj-y     = fork.o exec_domain.o panic.o \
+ 	    cpu.o exit.o softirq.o resource.o \
+ 	    sysctl.o sysctl_binary.o capability.o ptrace.o user.o \
+diff --git a/kernel/irq/Makefile b/kernel/irq/Makefile
+index ff6e352e3a6c..af7835ecc2e2 100644
+--- a/kernel/irq/Makefile
++++ b/kernel/irq/Makefile
+@@ -1,5 +1,6 @@
+ # SPDX-License-Identifier: GPL-2.0
+ 
++KASAN_SANITIZE := n
+ obj-y := irqdesc.o handle.o manage.o spurious.o resend.o chip.o dummychip.o devres.o
+ obj-$(CONFIG_IRQ_TIMINGS) += timings.o
+ obj-$(CONFIG_GENERIC_IRQ_CHIP) += generic-chip.o
+diff --git a/kernel/printk/Makefile b/kernel/printk/Makefile
+index 4a2ffc39eb95..ffa0e281f8d2 100644
+--- a/kernel/printk/Makefile
++++ b/kernel/printk/Makefile
+@@ -1,3 +1,4 @@
+ obj-y	= printk.o
+ obj-$(CONFIG_PRINTK)	+= printk_safe.o
+ obj-$(CONFIG_A11Y_BRAILLE_CONSOLE)	+= braille.o
++KASAN_SANITIZE := n
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index e9866f86f304..7c93dba3cbfb 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -5404,7 +5404,7 @@ void init_idle(struct task_struct *idle, int cpu)
+ 	idle->se.exec_start = sched_clock();
+ 	idle->flags |= PF_IDLE;
+ 
+-	kasan_unpoison_task_stack(idle);
++	//kasan_unpoison_task_stack(idle);
+ 
+ #ifdef CONFIG_SMP
+ 	/*
+diff --git a/lib/Kconfig.kasan b/lib/Kconfig.kasan
+index 3d35d062970d..4e0721658b79 100644
+--- a/lib/Kconfig.kasan
++++ b/lib/Kconfig.kasan
+@@ -7,7 +7,7 @@ config KASAN
+ 	bool "KASan: runtime memory debugger"
+ 	depends on SLUB || (SLAB && !DEBUG_SLAB)
+ 	select CONSTRUCTORS
+-	select STACKDEPOT
++#select STACKDEPOT
+ 	help
+ 	  Enables kernel address sanitizer - runtime memory debugger,
+ 	  designed to find out-of-bounds accesses and use-after-free bugs.
+@@ -56,6 +56,17 @@ config KASAN_INLINE
+ 
+ endchoice
+ 
++
++config KASAN_TEST_ON_CHDIR
++        bool "test.."
++	depends on KASAN
++	default n
++
++config KASAN_PANIC_ON_ERROR
++	bool "panic on violation for lkl-fs-fuzz"
++	depends on KASAN
++	default n
++
+ config TEST_KASAN
+ 	tristate "Module for testing kasan for bug detection"
+ 	depends on m && KASAN
+diff --git a/lib/Makefile b/lib/Makefile
+index 9f18c8152281..f9bc930b863f 100644
+--- a/lib/Makefile
++++ b/lib/Makefile
+@@ -3,6 +3,7 @@
+ # Makefile for some libs needed in the kernel.
+ #
+ 
++KASAN_SANITIZE := n
+ ifdef CONFIG_FUNCTION_TRACER
+ ORIG_CFLAGS := $(KBUILD_CFLAGS)
+ KBUILD_CFLAGS = $(subst $(CC_FLAGS_FTRACE),,$(ORIG_CFLAGS))
+diff --git a/lib/string.c b/lib/string.c
+index 2c0900a5d51a..e935dba0996c 100644
+--- a/lib/string.c
++++ b/lib/string.c
+@@ -701,6 +701,17 @@ void *memset(void *s, int c, size_t count)
+ 	return s;
+ }
+ EXPORT_SYMBOL(memset);
++
++void *__memset(void *s, int c, size_t count)
++{
++	char *xs = s;
++
++	while (count--)
++		*xs++ = c;
++	return s;
++}
++EXPORT_SYMBOL(__memset);
++
+ #endif
+ 
+ /**
+@@ -810,6 +821,17 @@ void *memcpy(void *dest, const void *src, size_t count)
+ 	return dest;
+ }
+ EXPORT_SYMBOL(memcpy);
++void *__memcpy(void *dest, const void *src, size_t count)
++{
++	char *tmp = dest;
++	const char *s = src;
++
++	while (count--)
++		*tmp++ = *s++;
++	return dest;
++}
++EXPORT_SYMBOL(__memcpy);
++
+ #endif
+ 
+ #ifndef __HAVE_ARCH_MEMMOVE
+@@ -842,6 +864,31 @@ void *memmove(void *dest, const void *src, size_t count)
+ 	return dest;
+ }
+ EXPORT_SYMBOL(memmove);
++
++
++void *__memmove(void *dest, const void *src, size_t count)
++{
++	char *tmp;
++	const char *s;
++
++	if (dest <= src) {
++		tmp = dest;
++		s = src;
++		while (count--)
++			*tmp++ = *s++;
++	} else {
++		tmp = dest;
++		tmp += count;
++		s = src;
++		s += count;
++		while (count--)
++			*--tmp = *--s;
++	}
++	return dest;
++}
++EXPORT_SYMBOL(__memmove);
++
++
+ #endif
+ 
+ #ifndef __HAVE_ARCH_MEMCMP
+@@ -962,7 +1009,6 @@ void *memchr(const void *s, int c, size_t n)
+ }
+ EXPORT_SYMBOL(memchr);
+ #endif
+-
+ static void *check_bytes8(const u8 *start, u8 value, unsigned int bytes)
+ {
+ 	while (bytes) {
+diff --git a/mm/kasan/kasan.c b/mm/kasan/kasan.c
+index f185455b3406..6aefe48159cf 100644
+--- a/mm/kasan/kasan.c
++++ b/mm/kasan/kasan.c
+@@ -31,7 +31,9 @@
+ #include <linux/sched.h>
+ #include <linux/sched/task_stack.h>
+ #include <linux/slab.h>
++#ifdef CONFIG_STACKDEPOT
+ #include <linux/stacktrace.h>
++#endif
+ #include <linux/string.h>
+ #include <linux/types.h>
+ #include <linux/vmalloc.h>
+@@ -40,6 +42,13 @@
+ #include "kasan.h"
+ #include "../slab.h"
+ 
++#undef __memset
++extern void *__memset(void *, int, __kernel_size_t);
++#undef __memcpy
++extern void *__memcpy(void *, const void *, __kernel_size_t);
++#undef __memmove
++extern void *__memmove(void *, const void *, __kernel_size_t);
++
+ void kasan_enable_current(void)
+ {
+ 	current->kasan_depth++;
+@@ -242,15 +251,30 @@ static __always_inline bool memory_is_poisoned(unsigned long addr, size_t size)
+ }
+ 
+ static __always_inline void check_memory_region_inline(unsigned long addr,
+-						size_t size, bool write,
+-						unsigned long ret_ip)
++                                               size_t size, bool write,
++                                               unsigned long ret_ip)
+ {
+-	if (unlikely(size == 0))
++        if (unlikely(size == 0))
+ 		return;
++        if(unlikely(lkl_kasan_shadow_start == 0)){
++            panic("lkl_kasan_shadow_start = 0!!");
++            return;
++        }
++
+ 
+ 	if (unlikely((void *)addr <
+-		kasan_shadow_to_mem((void *)KASAN_SHADOW_START))) {
++		kasan_shadow_to_mem((void *)KASAN_SHADOW_START)
++#ifdef CONFIG_LKL
++
++                || ((unsigned long)addr > memory_end) || ((unsigned long)addr < memory_start)
++#endif 
++                
++                // Dirty!!!
++                )) {
++#ifndef CONFIG_LKL
++            //XXX
+ 		kasan_report(addr, size, write, ret_ip);
++#endif
+ 		return;
+ 	}
+ 
+@@ -278,7 +302,7 @@ void kasan_check_write(const volatile void *p, unsigned int size)
+ 	check_memory_region((unsigned long)p, size, true, _RET_IP_);
+ }
+ EXPORT_SYMBOL(kasan_check_write);
+-
++#ifdef memset
+ #undef memset
+ void *memset(void *addr, int c, size_t len)
+ {
+@@ -286,7 +310,8 @@ void *memset(void *addr, int c, size_t len)
+ 
+ 	return __memset(addr, c, len);
+ }
+-
++#endif
++#ifdef memmove
+ #undef memmove
+ void *memmove(void *dest, const void *src, size_t len)
+ {
+@@ -295,7 +320,8 @@ void *memmove(void *dest, const void *src, size_t len)
+ 
+ 	return __memmove(dest, src, len);
+ }
+-
++#endif
++#ifdef memcpy
+ #undef memcpy
+ void *memcpy(void *dest, const void *src, size_t len)
+ {
+@@ -304,7 +330,7 @@ void *memcpy(void *dest, const void *src, size_t len)
+ 
+ 	return __memcpy(dest, src, len);
+ }
+-
++#endif
+ void kasan_alloc_pages(struct page *page, unsigned int order)
+ {
+ 	if (likely(!PageHighMem(page)))
+@@ -420,7 +446,7 @@ static inline int in_irqentry_text(unsigned long ptr)
+ 		(ptr >= (unsigned long)&__softirqentry_text_start &&
+ 		 ptr < (unsigned long)&__softirqentry_text_end);
+ }
+-
++#ifdef CONFIG_STACKDEPOT
+ static inline void filter_irq_stacks(struct stack_trace *trace)
+ {
+ 	int i;
+@@ -435,6 +461,7 @@ static inline void filter_irq_stacks(struct stack_trace *trace)
+ 		}
+ }
+ 
++
+ static inline depot_stack_handle_t save_stack(gfp_t flags)
+ {
+ 	unsigned long entries[KASAN_STACK_DEPTH];
+@@ -454,10 +481,13 @@ static inline depot_stack_handle_t save_stack(gfp_t flags)
+ 	return depot_save_stack(&trace, flags);
+ }
+ 
++#endif
+ static inline void set_track(struct kasan_track *track, gfp_t flags)
+ {
+ 	track->pid = current->pid;
++#ifdef CONFIG_STACKDEPOT
+ 	track->stack = save_stack(flags);
++#endif
+ }
+ 
+ struct kasan_alloc_meta *get_alloc_info(struct kmem_cache *cache,
+@@ -545,7 +575,7 @@ void kasan_kmalloc(struct kmem_cache *cache, const void *object, size_t size,
+ 	redzone_end = round_up((unsigned long)object + cache->object_size,
+ 				KASAN_SHADOW_SCALE_SIZE);
+ 
+-	kasan_unpoison_shadow(object, size);
++        kasan_unpoison_shadow(object, size);
+ 	kasan_poison_shadow((void *)redzone_start, redzone_end - redzone_start,
+ 		KASAN_KMALLOC_REDZONE);
+ 
+@@ -615,7 +645,7 @@ void kasan_kfree_large(void *ptr, unsigned long ip)
+ 		kasan_report_invalid_free(ptr, ip);
+ 	/* The object will be poisoned by page_alloc. */
+ }
+-
++#ifndef CONFIG_LKL
+ int kasan_module_alloc(void *addr, size_t size)
+ {
+ 	void *ret;
+@@ -643,7 +673,7 @@ int kasan_module_alloc(void *addr, size_t size)
+ 
+ 	return -ENOMEM;
+ }
+-
++#endif
+ void kasan_free_shadow(const struct vm_struct *vm)
+ {
+ 	if (vm->flags & VM_KASAN)
+diff --git a/mm/kasan/kasan.h b/mm/kasan/kasan.h
+index c12dcfde2ebd..bd5fcb43704b 100644
+--- a/mm/kasan/kasan.h
++++ b/mm/kasan/kasan.h
+@@ -101,7 +101,21 @@ struct kasan_free_meta *get_free_info(struct kmem_cache *cache,
+ 
+ static inline const void *kasan_shadow_to_mem(const void *shadow_addr)
+ {
+-	return (void *)(((unsigned long)shadow_addr - KASAN_SHADOW_OFFSET)
++    unsigned long shadow_offset;
++    shadow_offset = KASAN_SHADOW_OFFSET;
++#ifdef CONFIG_LKL
++    if((unsigned long)shadow_addr >= lkl_kasan_shadow_start &&
++            (unsigned long)shadow_addr <= lkl_kasan_shadow_end) {
++        shadow_offset = KASAN_SHADOW_OFFSET;
++    }
++    else if ((unsigned long)shadow_addr >= lkl_kasan_stack_shadow_start && shadow_addr <= lkl_kasan_stack_shadow_end) {
++        shadow_offset = KASAN_STACK_SHADOW_OFFSET;
++    }
++    else {
++        panic("failed to find stack shadow\n");
++    }
++#endif
++	return (void *)(((unsigned long)shadow_addr - shadow_offset)
+ 		<< KASAN_SHADOW_SCALE_SHIFT);
+ }
+ 
+diff --git a/mm/kasan/kasan_init.c b/mm/kasan/kasan_init.c
+index f436246ccc79..66e9e7d79c93 100644
+--- a/mm/kasan/kasan_init.c
++++ b/mm/kasan/kasan_init.c
+@@ -30,6 +30,7 @@
+  */
+ unsigned char kasan_zero_page[PAGE_SIZE] __page_aligned_bss;
+ 
++#ifdef CONFIG_MMU
+ #if CONFIG_PGTABLE_LEVELS > 4
+ p4d_t kasan_zero_p4d[MAX_PTRS_PER_P4D] __page_aligned_bss;
+ #endif
+@@ -39,7 +40,10 @@ pud_t kasan_zero_pud[PTRS_PER_PUD] __page_aligned_bss;
+ #if CONFIG_PGTABLE_LEVELS > 2
+ pmd_t kasan_zero_pmd[PTRS_PER_PMD] __page_aligned_bss;
+ #endif
++
++
+ pte_t kasan_zero_pte[PTRS_PER_PTE] __page_aligned_bss;
++#endif
+ 
+ static __init void *early_alloc(size_t size, int node)
+ {
+@@ -47,6 +51,7 @@ static __init void *early_alloc(size_t size, int node)
+ 					BOOTMEM_ALLOC_ACCESSIBLE, node);
+ }
+ 
++#ifdef CONFIG_MMU
+ static void __init zero_pte_populate(pmd_t *pmd, unsigned long addr,
+ 				unsigned long end)
+ {
+@@ -139,6 +144,7 @@ static void __init zero_p4d_populate(pgd_t *pgd, unsigned long addr,
+ 	} while (p4d++, addr = next, addr != end);
+ }
+ 
++
+ /**
+  * kasan_populate_zero_shadow - populate shadow memory region with
+  *                               kasan_zero_page
+@@ -197,3 +203,4 @@ void __init kasan_populate_zero_shadow(const void *shadow_start,
+ 		zero_p4d_populate(pgd, addr, next);
+ 	} while (pgd++, addr = next, addr != end);
+ }
++#endif
+diff --git a/mm/kasan/report.c b/mm/kasan/report.c
+index 5c169aa688fd..eddeef6e021e 100644
+--- a/mm/kasan/report.c
++++ b/mm/kasan/report.c
+@@ -21,8 +21,10 @@
+ #include <linux/printk.h>
+ #include <linux/sched.h>
+ #include <linux/slab.h>
++#ifdef CONFIG_STACKDEPOT
+ #include <linux/stackdepot.h>
+ #include <linux/stacktrace.h>
++#endif
+ #include <linux/string.h>
+ #include <linux/types.h>
+ #include <linux/kasan.h>
+@@ -116,12 +118,17 @@ static const char *get_wild_bug_type(struct kasan_access_info *info)
+ 	const char *bug_type = "unknown-crash";
+ 
+ 	if ((unsigned long)info->access_addr < PAGE_SIZE)
+-		bug_type = "null-ptr-deref";
++		bug_type = "null-ptr-deref (addr does not have shadow)";
++#ifndef CONFIG_LKL
+ 	else if ((unsigned long)info->access_addr < TASK_SIZE)
+ 		bug_type = "user-memory-access";
++#endif
+ 	else
+-		bug_type = "wild-memory-access";
++		bug_type = "wild-memory-access (addr does not have shadow)";
+ 
++        pr_info("%lx\n",info->access_addr);
++        pr_info("%lx\n",memory_start);
++        pr_info("%lx\n",memory_end);
+ 	return bug_type;
+ }
+ 
+@@ -178,18 +185,24 @@ static void kasan_end_report(unsigned long *flags)
+ 	spin_unlock_irqrestore(&report_lock, *flags);
+ 	if (panic_on_warn)
+ 		panic("panic_on_warn set ...\n");
++#ifdef CONFIG_KASAN_PANIC_ON_ERROR
++        panic("ksan_panic_on_error set\n");
++#endif
+ 	kasan_enable_current();
+ }
+ 
+ static void print_track(struct kasan_track *track, const char *prefix)
+ {
+ 	pr_err("%s by task %u:\n", prefix, track->pid);
++#ifdef CONFIG_STACKDEPOT
+ 	if (track->stack) {
+ 		struct stack_trace trace;
+ 
+ 		depot_fetch_stack(track->stack, &trace);
+ 		print_stack_trace(&trace, 0);
+-	} else {
++	} else 
++#endif
++        {
+ 		pr_err("(stack is not available)\n");
+ 	}
+ }
+diff --git a/mm/mempool.c b/mm/mempool.c
+index b54f2c20e5e0..e06c080b3feb 100644
+--- a/mm/mempool.c
++++ b/mm/mempool.c
+@@ -105,6 +105,7 @@ static inline void poison_element(mempool_t *pool, void *element)
+ 
+ static __always_inline void kasan_poison_element(mempool_t *pool, void *element)
+ {
++    //return;
+ 	if (pool->alloc == mempool_alloc_slab || pool->alloc == mempool_kmalloc)
+ 		kasan_poison_kfree(element, _RET_IP_);
+ 	if (pool->alloc == mempool_alloc_pages)
+@@ -113,6 +114,7 @@ static __always_inline void kasan_poison_element(mempool_t *pool, void *element)
+ 
+ static void kasan_unpoison_element(mempool_t *pool, void *element, gfp_t flags)
+ {
++    //return;
+ 	if (pool->alloc == mempool_alloc_slab || pool->alloc == mempool_kmalloc)
+ 		kasan_unpoison_slab(element);
+ 	if (pool->alloc == mempool_alloc_pages)
+diff --git a/mm/slub.c b/mm/slub.c
+index 44aa7847324a..f29bea1542dc 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -185,7 +185,7 @@ static inline bool kmem_cache_has_cpu_partial(struct kmem_cache *s)
+  * disabled when slub_debug=O is used and a cache's min order increases with
+  * metadata.
+  */
+-#define DEBUG_METADATA_FLAGS (SLAB_RED_ZONE | SLAB_POISON | SLAB_STORE_USER)
++#define DEBUG_METADATA_FLAGS (SLAB_RED_ZONE | SLAB_POISON | SLAB_STORE_USER )
+ 
+ #define OO_SHIFT	16
+ #define OO_MASK		((1 << OO_SHIFT) - 1)
+diff --git a/scripts/Makefile.kasan b/scripts/Makefile.kasan
+index 69552a39951d..a4ec861076c7 100644
+--- a/scripts/Makefile.kasan
++++ b/scripts/Makefile.kasan
+@@ -8,8 +8,11 @@ endif
+ 
+ KASAN_SHADOW_OFFSET ?= $(CONFIG_KASAN_SHADOW_OFFSET)
+ 
+-CFLAGS_KASAN_MINIMAL := -fsanitize=kernel-address
+-
++CFLAGS_KASAN_MINIMAL := -fsanitize=kernel-address  \
++	-mllvm -asan-instrumentation-with-call-threshold=0 \
++	-mllvm -asan-stack=1 \
++	-mllvm -asan-instrument-reads=1 \
++	-mllvm -asan-instrument-writes=1
+ cc-param = $(call cc-option, -mllvm -$(1), $(call cc-option, --param $(1)))
+ 
+ ifeq ($(call cc-option, $(CFLAGS_KASAN_MINIMAL) -Werror),)
+@@ -24,17 +27,17 @@ else
+ 			$(call cc-option, -fsanitize=kernel-address \
+ 			-mllvm -asan-mapping-offset=$(KASAN_SHADOW_OFFSET)))
+ 
+-   ifeq ($(strip $(CFLAGS_KASAN_SHADOW)),)
++   #ifeq ($(strip $(CFLAGS_KASAN_SHADOW)),)
+       CFLAGS_KASAN := $(CFLAGS_KASAN_MINIMAL)
+-   else
++   #else
+       # Now add all the compiler specific options that are valid standalone
+-      CFLAGS_KASAN := $(CFLAGS_KASAN_SHADOW) \
++   #   CFLAGS_KASAN := $(CFLAGS_KASAN_SHADOW) \
+ 	$(call cc-param,asan-globals=1) \
+ 	$(call cc-param,asan-instrumentation-with-call-threshold=$(call_threshold)) \
+ 	$(call cc-param,asan-stack=1) \
+ 	$(call cc-param,asan-use-after-scope=1) \
+ 	$(call cc-param,asan-instrument-allocas=1)
+-   endif
++   #endif
+ 
+ endif
+ 
+@@ -43,5 +46,10 @@ CFLAGS_KASAN += $(call cc-option, -fsanitize-address-use-after-scope)
+ endif
+ 
+ CFLAGS_KASAN_NOSANITIZE := -fno-builtin
+-
++# dirt overring for lkl... XXX XXX XXX
++CFLAGS_KASAN := -fsanitize=kernel-address  \
++	-mllvm -asan-instrumentation-with-call-threshold=0 \
++	-mllvm -asan-stack=0 \
++	-mllvm -asan-instrument-reads=1 \
++	-mllvm -asan-instrument-writes=1 
+ endif
+diff --git a/tools/Makefile b/tools/Makefile
+index 5c9947a29324..39b2e6966fb6 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -4,6 +4,8 @@
+ export srctree=
+ export objtree=
+ 
++#KASAN_SANITIZE := n
++
+ include scripts/Makefile.include
+ 
+ help:
+diff --git a/tools/lkl/Makefile b/tools/lkl/Makefile
+index d4b0dfdce6fe..fd00e286ca54 100644
+--- a/tools/lkl/Makefile
++++ b/tools/lkl/Makefile
+@@ -98,8 +98,11 @@ $(OUTPUT)Utils.o:
+ $(OUTPUT)Constants.o:
+ 	cp -f ../../../syscall/Constants.o $@
+ 
++$(OUTPUT)pmparser.o:
++	$(CXX) $(CXXFLAGS) -c $(OUTPUT)pmparser.c -o $@
++
+ # executor (CPP) 
+-$(OUTPUT)executor: $(OUTPUT)executor-in.o $(OUTPUT)Image.o $(OUTPUT)Program.o $(OUTPUT)Utils.o $(OUTPUT)Constants.o $(OUTPUT)liblkl.a
++$(OUTPUT)executor: $(OUTPUT)executor-in.o $(OUTPUT)Image.o $(OUTPUT)Program.o $(OUTPUT)Utils.o $(OUTPUT)Constants.o $(OUTPUT)liblkl.a $(OUTPUT)pmparser.o
+ 	$(QUIET_LINK)$(CXX) $(LDFLAGS) $(LDFLAGS_$*-y) -o $@ $^ $(LDLIBS) $(LDLIBS_$*-y)
+ 
+ # rule to link programs
+diff --git a/tools/lkl/Makefile.autoconf b/tools/lkl/Makefile.autoconf
+index eeab41f74a86..0139ca3cb866 100644
+--- a/tools/lkl/Makefile.autoconf
++++ b/tools/lkl/Makefile.autoconf
+@@ -44,9 +44,11 @@ define virtio_net_vde
+   LDLIBS += $(shell pkg-config --libs vdeplug)
+ endef
+ 
++# Can we do this selectively??
+ define posix_host
+   $(call set_autoconf_var,POSIX,y)
+   $(call set_autoconf_var,VIRTIO_NET,y)
++  $(call set_autoconf_var,KASAN,y)
+   LDFLAGS += -pie
+   CFLAGS += -fPIC -pthread
+   SOSUF := .so
+diff --git a/tools/lkl/Targets b/tools/lkl/Targets
+index e359ad7cf56d..8dda5fd13e8d 100644
+--- a/tools/lkl/Targets
++++ b/tools/lkl/Targets
+@@ -26,6 +26,7 @@ progs-$(LKL_HOST_CONFIG_ARCHIVE) += cptofs
+ LDLIBS_cptofs-y := -larchive
+ LDLIBS_cptofs-$(LKL_HOST_CONFIG_NEEDS_LARGP) += -largp
+ 
++
+ progs-y += tests/boot
+ progs-y += tests/disk
+ # progs-y += tests/net-test
+diff --git a/tools/lkl/executor b/tools/lkl/executor
+deleted file mode 100755
+index b12dc099e3ab..000000000000
+Binary files a/tools/lkl/executor and /dev/null differ
+diff --git a/tools/lkl/executor.cpp b/tools/lkl/executor.cpp
+index e879125c5807..c40a35d73447 100644
+--- a/tools/lkl/executor.cpp
++++ b/tools/lkl/executor.cpp
+@@ -22,6 +22,9 @@
+ 
+ #include <vector>
+ 
++//extern "C" {
++#include "pmparser.h"
++//}
+ #include "executor.hpp"
+ #include "Program.hpp"
+ 
+@@ -216,25 +219,67 @@ void *userfault_init(void *image_buffer, size_t size) {
+   return buffer;
+ }
+ 
++struct lkl_kasan_meta {
++    unsigned long stack_base;
++    unsigned long stack_size;
++    unsigned long global_base;
++    unsigned long global_size;
++};
++
++void fill_kasan_meta(struct lkl_kasan_meta* to) {
++
++    struct procmaps_struct *head, *pt;
++    pid_t pid = getpid();
++    printf("my pid: %d\n",pid);
++
++    head = pmparser_parse(pid);
++    //pmparser_print(head, -1);
++    
++    pt = head;
++    while(pt != NULL) {
++        if(strncmp(pt->pathname,"[stack]",10) == 0) {
++            to->stack_base = (unsigned long)pt->addr_start;
++            to->stack_size = (unsigned long)pt->length; 
++        }
++        pt = pt->next;
++    }
++    return;
++
++}
++
+ extern "C" void __afl_manual_init(void **buffer, size_t *size);
+ 
+ extern "C" void __afl_manual_init_syscall(void);
+ int main(int argc, char **argv)
+ {
+-	struct lkl_disk disk;
+-	long ret;
+-	char mpoint[32];
+-	unsigned int disk_id;
+-  
+-  void *image_buffer;
+-  size_t size;
+-	struct stat st;
++    struct lkl_disk disk;
++    long ret;
++    char mpoint[32];
++    unsigned int disk_id;
++
++    void *image_buffer;
++    size_t size;
++    struct stat st;
++unsigned long stack_base;
++        struct lkl_kasan_meta kasan_meta;
++
++
+ 
+ 	if (argp_parse(&argp_executor, argc, argv, 0, 0, &cla) < 0)
+ 		return -1;
+ 
+-	if (!cla.printk)
+-		lkl_host_ops.print = NULL;
++	if (!cla.printk) lkl_host_ops.print = NULL;
++        
++
++        fill_kasan_meta(&kasan_meta);
++
++
++        stack_base = lkl_kasan_init(&lkl_host_ops,
++                128 * 1024 * 1024,
++                kasan_meta.stack_base,
++                kasan_meta.stack_size);
++
++        printf("shadow_base: %lx\n",stack_base);
+   
+   	if (!cla.fsimg_path) {
+ 		__afl_manual_init(&image_buffer, &size); 
+@@ -262,6 +307,9 @@ int main(int argc, char **argv)
+ 	}
+ 	disk_id = ret;
+ 
++        printf("starting kernel\n");
++        fflush(NULL);
++
+ 	lkl_start_kernel(&lkl_host_ops, "mem=128M");
+ 	
+ 	ret = lkl_mount_dev(disk_id, cla.part, cla.fsimg_type, 0,
+diff --git a/tools/lkl/include/lkl.h b/tools/lkl/include/lkl.h
+index 35aeef3b92c3..ec1d267335d9 100644
+--- a/tools/lkl/include/lkl.h
++++ b/tools/lkl/include/lkl.h
+@@ -672,6 +672,14 @@ int lkl_sysctl(const char *path, const char *value);
+  */
+ void lkl_sysctl_parse_write(const char *sysctls);
+ 
++
++#ifdef LKL_HOST_CONFIG_KASAN
++struct lkl_host_operations;
++unsigned long lkl_kasan_init(struct lkl_host_operations* ops,
++        unsigned long mem_sz, unsigned long stack_base,
++        unsigned long stack_size);
++#endif
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/tools/lkl/pmparser.c b/tools/lkl/pmparser.c
+new file mode 100644
+index 000000000000..b293f88b7d47
+--- /dev/null
++++ b/tools/lkl/pmparser.c
+@@ -0,0 +1,213 @@
++/*
++ @Author	: ouadimjamal@gmail.com
++ @date		: December 2015
++
++Permission to use, copy, modify, distribute, and sell this software and its
++documentation for any purpose is hereby granted without fee, provided that
++the above copyright notice appear in all copies and that both that
++copyright notice and this permission notice appear in supporting
++documentation.  No representations are made about the suitability of this
++software for any purpose.  It is provided "as is" without express or
++implied warranty.
++*/
++
++#include "pmparser.h"
++
++/**
++ * gobal variables
++ */
++procmaps_struct* g_last_head=NULL;
++procmaps_struct* g_current=NULL;
++
++
++procmaps_struct* pmparser_parse(int pid){
++	char maps_path[500];
++	if(pid>=0 ){
++		sprintf(maps_path,"/proc/%d/maps",pid);
++	}else{
++		sprintf(maps_path,"/proc/self/maps");
++	}
++	FILE* file=fopen(maps_path,"r");
++	if(!file){
++		fprintf(stderr,"pmparser : cannot open the memory maps, %s\n",strerror(errno));
++		return NULL;
++	}
++	int ind=0;char buf[3000];
++	char c;
++	procmaps_struct* list_maps=NULL;
++	procmaps_struct* tmp;
++	procmaps_struct* current_node=list_maps;
++	char addr1[20],addr2[20], perm[8], offset[20], dev[10],inode[30],pathname[600];
++	while(1){
++		if( (c=fgetc(file))==EOF ) break;
++		fgets(buf+1,259,file);
++		buf[0]=c;
++		//allocate a node
++		tmp=(procmaps_struct*)malloc(sizeof(procmaps_struct));
++		//fill the node
++		_pmparser_split_line(buf,addr1,addr2,perm,offset, dev,inode,pathname);
++		//printf("#%s",buf);
++		//printf("%s-%s %s %s %s %s\t%s\n",addr1,addr2,perm,offset,dev,inode,pathname);
++		//addr_start & addr_end
++		unsigned long l_addr_start;
++		sscanf(addr1,"%lx",(long unsigned *)&tmp->addr_start );
++		sscanf(addr2,"%lx",(long unsigned *)&tmp->addr_end );
++		//size
++		tmp->length=(unsigned long)(tmp->addr_end)-(unsigned long)(tmp->addr_start);
++		//perm
++		strcpy(tmp->perm,perm);
++		tmp->is_r=(perm[0]=='r');
++		tmp->is_w=(perm[1]=='w');
++		tmp->is_x=(perm[2]=='x');
++		tmp->is_p=(perm[3]=='p');
++
++		//offset
++		sscanf(offset,"%lx",&tmp->offset );
++		//device
++		strcpy(tmp->dev,dev);
++		//inode
++		tmp->inode=atoi(inode);
++		//pathname
++		strcpy(tmp->pathname,pathname);
++		tmp->next=NULL;
++		//attach the node
++		if(ind==0){
++			list_maps=tmp;
++			list_maps->next=NULL;
++			current_node=list_maps;
++		}
++		current_node->next=tmp;
++		current_node=tmp;
++		ind++;
++		//printf("%s",buf);
++	}
++
++
++	g_last_head=list_maps;
++	return list_maps;
++}
++
++
++procmaps_struct* pmparser_next(){
++	if(g_last_head==NULL) return NULL;
++	if(g_current==NULL){
++		g_current=g_last_head;
++	}else
++		g_current=g_current->next;
++
++	return g_current;
++}
++
++
++
++void pmparser_free(procmaps_struct* maps_list){
++	if(maps_list==NULL) return ;
++	procmaps_struct* act=maps_list;
++	procmaps_struct* nxt=act->next;
++	while(act!=NULL){
++		free(act);
++		act=nxt;
++		if(nxt!=NULL)
++			nxt=nxt->next;
++	}
++
++}
++
++
++void _pmparser_split_line(
++		char*buf,char*addr1,char*addr2,
++		char*perm,char* offset,char* device,char*inode,
++		char* pathname){
++	//
++	int orig=0;
++	int i=0;
++	//addr1
++	while(buf[i]!='-'){
++		addr1[i-orig]=buf[i];
++		i++;
++	}
++	addr1[i]='\0';
++	i++;
++	//addr2
++	orig=i;
++	while(buf[i]!='\t' && buf[i]!=' '){
++		addr2[i-orig]=buf[i];
++		i++;
++	}
++	addr2[i-orig]='\0';
++
++	//perm
++	while(buf[i]=='\t' || buf[i]==' ')
++		i++;
++	orig=i;
++	while(buf[i]!='\t' && buf[i]!=' '){
++		perm[i-orig]=buf[i];
++		i++;
++	}
++	perm[i-orig]='\0';
++	//offset
++	while(buf[i]=='\t' || buf[i]==' ')
++		i++;
++	orig=i;
++	while(buf[i]!='\t' && buf[i]!=' '){
++		offset[i-orig]=buf[i];
++		i++;
++	}
++	offset[i-orig]='\0';
++	//dev
++	while(buf[i]=='\t' || buf[i]==' ')
++		i++;
++	orig=i;
++	while(buf[i]!='\t' && buf[i]!=' '){
++		device[i-orig]=buf[i];
++		i++;
++	}
++	device[i-orig]='\0';
++	//inode
++	while(buf[i]=='\t' || buf[i]==' ')
++		i++;
++	orig=i;
++	while(buf[i]!='\t' && buf[i]!=' '){
++		inode[i-orig]=buf[i];
++		i++;
++	}
++	inode[i-orig]='\0';
++	//pathname
++	pathname[0]='\0';
++	while(buf[i]=='\t' || buf[i]==' ')
++		i++;
++	orig=i;
++	while(buf[i]!='\t' && buf[i]!=' ' && buf[i]!='\n'){
++		pathname[i-orig]=buf[i];
++		i++;
++	}
++	pathname[i-orig]='\0';
++
++}
++
++void pmparser_print(procmaps_struct* map, int order){
++
++	procmaps_struct* tmp=map;
++	int id=0;
++	if(order<0) order=-1;
++	while(tmp!=NULL){
++		//(unsigned long) tmp->addr_start;
++		if(order==id || order==-1){
++			printf("Backed by:\t%s\n",strlen(tmp->pathname)==0?"[anonym*]":tmp->pathname);
++			printf("Range:\t\t%p-%p\n",tmp->addr_start,tmp->addr_end);
++			printf("Length:\t\t%ld\n",tmp->length);
++			printf("Offset:\t\t%ld\n",tmp->offset);
++			printf("Permissions:\t%s\n",tmp->perm);
++			printf("Inode:\t\t%d\n",tmp->inode);
++			printf("Device:\t\t%s\n",tmp->dev);
++		}
++		if(order!=-1 && id>order)
++			tmp=NULL;
++		else if(order==-1){
++			printf("#################################\n");
++			tmp=tmp->next;
++		}else tmp=tmp->next;
++
++		id++;
++	}
++}
+diff --git a/tools/lkl/pmparser.h b/tools/lkl/pmparser.h
+new file mode 100644
+index 000000000000..e22b179843fa
+--- /dev/null
++++ b/tools/lkl/pmparser.h
+@@ -0,0 +1,86 @@
++/*
++ @Author	: ouadimjamal@gmail.com
++ @date		: December 2015
++
++Permission to use, copy, modify, distribute, and sell this software and its
++documentation for any purpose is hereby granted without fee, provided that
++the above copyright notice appear in all copies and that both that
++copyright notice and this permission notice appear in supporting
++documentation.  No representations are made about the suitability of this
++software for any purpose.  It is provided "as is" without express or
++implied warranty.
++
++ */
++
++#ifndef H_PMPARSER
++#define H_PMPARSER
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <string.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <errno.h>
++
++/**
++ * procmaps_struct
++ * @desc hold all the information about an area in the process's  VM
++ */
++typedef struct procmaps_struct{
++	void* addr_start; 	//< start address of the area
++	void* addr_end; 	//< end address
++	unsigned long length; //< size of the range
++
++	char perm[5];		//< permissions rwxp
++	short is_r;			//< rewrote of perm with short flags
++	short is_w;
++	short is_x;
++	short is_p;
++
++	long offset;	//< offset
++	char dev[12];	//< dev major:minor
++	int inode;		//< inode of the file that backs the area
++
++	char pathname[600];		//< the path of the file that backs the area
++	//chained list
++	struct procmaps_struct* next;		//<handler of the chinaed list
++} procmaps_struct;
++
++/**
++ * pmparser_parse
++ * @param pid the process id whose memory map to be parser. the current process if pid<0
++ * @return list of procmaps_struct structers
++ */
++procmaps_struct* pmparser_parse(int pid);
++
++/**
++ * pmparser_next
++ * @description move between areas
++ */
++procmaps_struct* pmparser_next();
++/**
++ * pmparser_free
++ * @description should be called at the end to free the resources
++ * @param maps_list the head of the list to be freed
++ */
++void pmparser_free(procmaps_struct* maps_list);
++
++/**
++ * _pmparser_split_line
++ * @description internal usage
++ */
++void _pmparser_split_line(char*buf,char*addr1,char*addr2,char*perm, char* offset, char* device,char*inode,char* pathname);
++
++/**
++ * pmparser_print
++ * @param map the head of the list
++ * @order the order of the area to print, -1 to print everything
++ */
++void pmparser_print(procmaps_struct* map,int order);
++
++
++
++
++
++#endif
