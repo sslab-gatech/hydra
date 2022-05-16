@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # SPDX-License-Identifier: MIT
 
@@ -10,7 +10,7 @@ tmpfs_base = "/tmp/mosbench/tmpfs-separate"
 FSLIST = ["btrfs", "f2fs", "ext4", "xfs"]
 
 def usage():
-    print "USAGE: ./run.py -t [fstype] -c [cpu_id] -l [tmpfs_id] -g [fuzz_group]"
+    print("USAGE: ./run.py -t [fstype] -c [cpu_id] -l [tmpfs_id] -g [fuzz_group]")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -23,16 +23,16 @@ if __name__ == "__main__":
 
     fail = 0
     if args.fstype is None:
-        print "specify fs type by -t [fsname]"
+        print("specify fs type by -t [fsname]")
         fail = 1
     elif args.fstype not in FSLIST:
-        print "you can test {0}".format(str(FSLIST))
+        print("you can test {0}".format(str(FSLIST)))
         fail = 1
     elif args.cpu_id is None:
-        print "specify core id to run fuzzing instance on by -c [cpu_id]"
+        print("specify core id to run fuzzing instance on by -c [cpu_id]")
         fail = 1
     elif args.log_id is None:
-        print "specify core for tmpfs to store log in by -l [log_id]"
+        print("specify core for tmpfs to store log in by -l [log_id]")
         fail = 1
     elif args.grp_id is None:
         args.grp_id = 0
@@ -48,19 +48,19 @@ if __name__ == "__main__":
     try:
         os.mkdir(tmp_dir)
     except OSError:
-        print "{0} already exists".format(tmp_dir)
+        print("{0} already exists".format(tmp_dir))
     try:
         os.mkdir(log_dir)
     except OSError:
-        print "{0} already exists".format(log_dir)
+        print("{0} already exists".format(log_dir))
     try:
         os.mkdir(in_dir)
     except OSError:
-        print "{0} already exists".format(in_dir)
+        print("{0} already exists".format(in_dir))
     try:
         os.mkdir(out_dir)
     except OSError:
-        print "{0} already exists".format(out_dir)
+        print("{0} already exists".format(out_dir))
 
     instance_name = "fuzzer_{0}-cpu{1}log{2}grp{3}".format(args.fstype, args.cpu_id, args.log_id, args.grp_id)
     shm_name = "shm_{0}-{1}".format(args.fstype, args.cpu_id)
@@ -74,5 +74,5 @@ if __name__ == "__main__":
 
     os.system(cmd)
 
-    print "Fuzzer stopped. You can find buggy test cases in {0}".format(log_dir)
+    print("Fuzzer stopped. You can find buggy test cases in {0}".format(log_dir))
 
