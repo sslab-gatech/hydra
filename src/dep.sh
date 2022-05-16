@@ -20,6 +20,7 @@ elif [[ $(lsb_release -rs) == "20.04" ]]; then
     flex bison bc libunistring2 libunistring-dev \
     e2fslibs-dev f2fs-tools \
     python3-zmq python3-zmq-dbg libzmq3-dev libzmq5 \
+    gettext
 
   pip3 install aiozmq
 
