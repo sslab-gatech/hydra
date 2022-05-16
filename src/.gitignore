@@ -8,3 +8,5 @@ lkl-kasan
 /lkl
 /llvm
 /llvm-build
+
+*.pyc
