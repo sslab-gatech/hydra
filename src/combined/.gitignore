@@ -10,5 +10,6 @@ program_test
 program_reserialize
 fscq
 fscq-cc
+yxv6-cc
 create_corpus_consistency
 create_corpus_consistency2
