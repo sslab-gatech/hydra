@@ -63,9 +63,9 @@ $ make build-xfs-imgwrp
 
 * (Skip if you want to test the latest kernel) To reproduce bugs presented in the SOSP'19 paper, do the following to back-port LKL to kernel 4.16.
 ```
-$ cd lkl (pwd: proj_root/src/lkl) # assuming that you are in the src directory
-$ make mrproper
-$ git pull
+$ mv lkl lkl-master # (pwd: proj_root/src)
+$ git clone https://github.com/sslab-gatech/lkl-hydra.git lkl
+$ cd lkl
 $ git checkout v4.16-backport
 $ ./compile -t btrfs
 $ cd .. (pwd: proj_root/src)
