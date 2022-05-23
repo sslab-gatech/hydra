@@ -37,6 +37,12 @@ This repository is provided under the terms of MIT license.
   - src/emulator: Hydra's in-house crash consistency checker, SymC3
 
 
+## System requirements
+
+Hydra requires Ubuntu 18.04. A compatibility issue is found in Ubuntu 20.04,
+and we are working on a fix.
+
+
 ## Setup
 
 ### 1. All setup should be done under `src`
